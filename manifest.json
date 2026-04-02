@@ -1,0 +1,26 @@
+{
+  "name": "לוח הספירלה",
+  "short_name": "ספירלה",
+  "description": "לוח שנה דינמי ספירלי",
+  "start_url": "./spiral_android-130.html",
+  "display": "standalone",
+  "background_color": "#f5f5f7",
+  "theme_color": "#4285f4",
+  "orientation": "portrait",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

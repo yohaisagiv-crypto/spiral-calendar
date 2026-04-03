@@ -1,0 +1,1814 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=5,user-scalable=yes">
+<title>לוח הספירלה</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4285f4">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="לוח הספירלה">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Heebo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--bg:#f5f5f7;--bg2:#fff;--bg3:#e8e8f0;--brd:#e0e0e8;--txt:#1a1a2e;--txt2:#555;--txt3:#aaa;--blue:#4285f4;--red:#e74c3c;--grn:#27ae60}
+body{background:var(--bg);color:var(--txt);font-family:'Heebo',sans-serif;height:100dvh;overflow:hidden;display:flex;flex-direction:column}
+#root{position:fixed;inset:0;display:flex;flex-direction:column;overflow:hidden}
+/* Top bar */
+#topBar{display:flex;align-items:center;padding:6px 10px;background:#fff;border-bottom:1px solid var(--brd);flex-shrink:0;gap:8px}
+#gcalDot{width:12px;height:12px;border-radius:50%;background:#ccc;cursor:pointer;flex-shrink:0;transition:background .3s}
+#gcalDot.on{background:#27ae60}
+.navBtn{background:#f0f0f8;border:none;border-radius:10px;width:36px;height:36px;cursor:pointer;font-size:16px;color:var(--txt2)}
+#todayBtn{display:none;background:var(--blue);color:#fff;border:none;border-radius:10px;padding:6px 12px;font-size:12px;font-family:'Space Mono',monospace;cursor:pointer}
+/* Mode tabs */
+#modeTabs{display:flex;background:#fff;border-bottom:2px solid var(--brd);flex-shrink:0}
+.modeTab{flex:1;padding:10px 4px;border:none;background:transparent;font-family:'Heebo',sans-serif;font-size:16px;font-weight:700;color:var(--txt3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;display:flex;align-items:center;justify-content:center;gap:5px}
+.modeTab.on{color:var(--blue);border-bottom-color:var(--blue);font-weight:700}
+/* Countdown strip */
+#cdStrip{display:flex;overflow-x:auto;gap:8px;padding:6px 12px;background:#fff;border-bottom:1px solid var(--brd);flex-shrink:0;scrollbar-width:none}
+#cdStrip::-webkit-scrollbar{display:none}
+.cdPill{display:flex;align-items:center;gap:6px;padding:5px 11px;background:#f0f0f8;border-radius:20px;white-space:nowrap;font-size:11.5px;cursor:pointer;flex-shrink:0}
+.cdPill .dot{width:7px;height:7px;border-radius:50%}
+.cdPill .ev-title{color:var(--txt2)}
+.cdPill .ev-time{color:var(--blue);font-weight:700}
+/* Year legend */
+#yearLegend{display:none;flex-shrink:0;flex-wrap:wrap;gap:6px;padding:5px 12px;background:#f0f0f8;border-bottom:1px solid var(--brd);align-items:center}
+/* Swiper */
+#swiper{flex:1;min-height:0;position:relative;overflow:hidden}
+#pg0{position:absolute;inset:0;display:flex;flex-direction:column}
+.pgScreen{position:absolute;inset:0;background:#f5f5f7;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);z-index:10}
+.pgScreen.on{transform:translateX(0)}
+/* Canvas */
+#cvWrap{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--bg)}
+#cv{display:block;touch-action:none}
+/* Page indicator */
+#pageIndicator{display:flex;justify-content:center;gap:8px;padding:6px;flex-shrink:0;background:#fff;border-top:1px solid var(--brd)}
+.pgDot{width:8px;height:8px;border-radius:50%;background:var(--brd);cursor:pointer;transition:background .2s}
+.pgDot.on{background:var(--blue)}
+/* Sheets */
+.sheet{position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -4px 24px rgba(0,0,0,.12);transform:translateY(100%);transition:transform .32s cubic-bezier(.4,0,.2,1);z-index:50;padding:0 18px 32px;max-height:80vh;overflow-y:auto}
+.sheet.open{transform:translateY(0)}
+.bHdl{width:40px;height:4px;border-radius:2px;background:#ddd;margin:12px auto 16px}
+/* Day sheet */
+.dsTitle{font-family:'Space Mono',monospace;font-size:15px;color:var(--txt);margin-bottom:12px}
+.evCard{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f5f5f7;border-radius:12px;margin-bottom:8px;border-right:3px solid var(--blue);cursor:pointer}
+.evCard.done{opacity:.5}
+.evDot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.evName{flex:1;font-size:13px;color:var(--txt)}
+.evTime{font-family:'Space Mono',monospace;font-size:11px;color:var(--txt3)}
+.evCd{font-family:'Space Mono',monospace;font-size:11px;font-weight:700}
+.evDay{font-family:'Space Mono',monospace;font-size:11px;color:var(--txt3)}
+.evDel{background:none;border:none;color:#ccc;font-size:16px;cursor:pointer;padding:0 4px}
+/* Add sheet */
+.addInp{width:100%;background:#f5f5f7;border:1px solid var(--brd);border-radius:12px;padding:12px 14px;font-size:15px;font-family:'Heebo',sans-serif;outline:none;color:var(--txt);margin-bottom:10px}
+.addRow{display:flex;gap:8px;margin-bottom:10px}
+.addLbl{font-size:11px;color:var(--txt3);font-family:'Space Mono',monospace;margin-bottom:5px}
+.prioBtn{flex:1;padding:9px 4px;border:1px solid var(--brd);border-radius:10px;background:#f5f5f7;font-size:12px;cursor:pointer;font-family:'Space Mono',monospace}
+.prioBtn.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.catBtn{flex:1;padding:8px 4px;border:1px solid var(--brd);border-radius:10px;background:#f5f5f7;font-size:11px;cursor:pointer;font-family:'Heebo',sans-serif}
+.catBtn.on{color:#fff;border-color:currentColor}
+.doAdd{width:100%;padding:14px;background:var(--blue);color:#fff;border:none;border-radius:14px;font-size:15px;font-family:'Heebo',sans-serif;cursor:pointer;margin-top:4px}
+/* Overlay */
+#ov{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:40;display:none}
+#ov.show{display:block}
+/* Events screen */
+.pgScroll{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+/* Chat screen */
+.chatWrap{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.msg{max-width:85%;padding:10px 14px;border-radius:16px;font-size:13px;line-height:1.5}
+.msg.a{background:#fff;color:var(--txt);align-self:flex-start;border-bottom-left-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.msg.u{background:var(--blue);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.qRow{display:flex;gap:6px;padding:8px 14px;flex-wrap:wrap;flex-shrink:0;border-top:1px solid var(--brd)}
+.qBtn{padding:7px 12px;background:#f0f0f8;border:none;border-radius:20px;font-size:12px;font-family:'Heebo',sans-serif;cursor:pointer;color:var(--txt2)}
+.chatInpRow{display:flex;gap:8px;padding:8px 14px 12px;flex-shrink:0;border-top:1px solid var(--brd);align-items:flex-end}
+#chatInp{flex:1;background:#f5f5f7;border:1px solid var(--brd);border-radius:14px;padding:10px 14px;font-size:14px;font-family:'Heebo',sans-serif;outline:none;resize:none;color:var(--txt);max-height:100px}
+#chatSend{background:var(--blue);color:#fff;border:none;border-radius:12px;width:38px;height:38px;font-size:18px;cursor:pointer}
+/* Settings */
+.setSection{margin-bottom:18px}
+.setLbl{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--txt3);margin-bottom:8px;text-transform:uppercase;padding-right:4px}
+.setCard{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.setRow{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--brd);cursor:pointer}
+.setRow:last-child{border-bottom:none}
+.setIco{font-size:18px;width:24px;text-align:center}
+.setTxt{flex:1}
+.setName{font-size:14px;color:var(--txt)}
+.setSub{font-size:11px;color:var(--txt3);margin-top:2px}
+.setAct{font-size:13px;color:var(--blue);font-weight:600}
+/* GCal modal */
+#gcalModal{position:absolute;inset:0;background:rgba(0,0,0,.6);z-index:80;display:none;align-items:flex-end}
+#gcalModal.on{display:flex}
+.gmSheet{background:#fff;border-radius:24px 24px 0 0;padding:0 18px 32px;width:100%;border-top:3px solid var(--blue)}
+.gmTabs{display:flex;border-radius:10px;overflow:hidden;margin-bottom:14px;border:1px solid var(--brd)}
+.gmTab{flex:1;padding:9px;background:#f0f0f8;border:none;color:var(--txt3);font-family:'Space Mono',monospace;font-size:11px;cursor:pointer}
+.gmTab.on{background:var(--blue);color:#fff}
+.gmInp{width:100%;background:#f5f5f7;border:1px solid var(--brd);border-radius:10px;padding:11px 13px;color:var(--txt);font-size:13px;outline:none;font-family:'Space Mono',monospace;margin-bottom:10px}
+.gmBtn{width:100%;padding:13px;border:none;border-radius:12px;color:#fff;font-size:14px;cursor:pointer;font-family:'Heebo',sans-serif;margin-bottom:8px}
+.gmCancel{width:100%;padding:9px;background:transparent;border:none;color:var(--txt3);font-size:13px;cursor:pointer;font-family:'Heebo',sans-serif}
+/* Cat edit modal */
+#catEditModal{position:absolute;inset:0;background:rgba(0,0,0,.5);z-index:90;display:flex;align-items:flex-end}
+/* Print */
+@media print{#root{display:none}#printPage{display:block!important}}
+#printPage{display:none}
+
+#evStrip{flex-shrink:0;display:none;overflow-x:auto;gap:8px;padding:6px 10px;background:#fff;border-bottom:1px solid var(--brd);align-items:center;scrollbar-width:none;min-height:46px;}
+#evStrip::-webkit-scrollbar{display:none}
+.evPill{display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:20px;white-space:nowrap;font-size:12px;cursor:pointer;flex-shrink:0;border:1.5px solid transparent;touch-action:manipulation;}
+#editSheet{max-height:90vh;}
+.editField{width:100%;background:#f5f5f7;border:1px solid var(--brd);border-radius:12px;padding:11px 14px;font-size:14px;font-family:'Heebo',sans-serif;outline:none;color:var(--txt);margin-bottom:10px;}
+.linkPill{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#e8f0fe;border-radius:10px;margin-bottom:6px;}
+.linkPill a{flex:1;color:var(--blue);font-size:13px;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;text-decoration:none;}
+</style>
+</head>
+<body>
+<div id="root">
+  <!-- Top bar -->
+  <div id="topBar">
+    <div id="gcalDot" onclick="openGcal()" title="Google Calendar"></div>
+    <button class="navBtn" onclick="chMon(-1)">‹</button>
+    <div id="monthLbl" style="flex:1;text-align:center;font-family:'Space Mono',monospace;font-size:13px;color:var(--txt2)"></div>
+    <button id="todayBtn" onclick="goToday()">היום</button>
+    <button class="navBtn" onclick="chMon(1)">›</button>
+  </div>
+  <!-- Mode tabs -->
+  <div id="modeTabs">
+    <button class="modeTab" data-m="day" onclick="setMode('day')">⏱ יומי</button>
+    <button class="modeTab" data-m="week" onclick="setMode('week')">📅 שבועי</button>
+    <button class="modeTab" data-m="month" onclick="setMode('month')">🗓 חודשי</button>
+    <button class="modeTab on" data-m="year" onclick="setMode('year')">🌐 שנתי</button>
+  </div>
+  <!-- Countdown -->
+  <div id="cdStrip"></div>
+<div id="needleLabel" style="display:none;flex-shrink:0;align-items:center;gap:10px;padding:8px 12px;background:#fff;border-bottom:3px solid #e74c3c;"><button ontouchend="event.preventDefault();moveNeedle(-1)" onclick="moveNeedle(-1)" style="background:linear-gradient(135deg,#e74c3c,#c0392b);border:none;border-radius:50%;width:52px;height:52px;font-size:28px;color:#fff;cursor:pointer;flex-shrink:0;touch-action:manipulation;box-shadow:0 4px 14px rgba(231,76,60,.5);">&#8634;</button><div style="display:flex;flex-direction:column;gap:3px;align-items:center;flex:1;cursor:pointer;" onclick="openDatePicker()" ontouchend="event.preventDefault();openDatePicker()"><span id="nlLine1" style="font-size:14px;font-weight:900;font-family:Heebo,sans-serif;color:#1a1a2e"></span><span id="nlLine2" style="font-size:12px;font-weight:700;font-family:Space Mono,monospace"></span><span style="font-size:9px;color:#aaa;font-family:Space Mono,monospace">לחץ לבחירת תאריך</span></div><button ontouchend="event.preventDefault();moveNeedle(1)" onclick="moveNeedle(1)" style="background:linear-gradient(135deg,#e74c3c,#c0392b);border:none;border-radius:50%;width:52px;height:52px;font-size:28px;color:#fff;cursor:pointer;flex-shrink:0;touch-action:manipulation;box-shadow:0 4px 14px rgba(231,76,60,.5);">&#8635;</button><button ontouchend="event.preventDefault();nlAdd()" onclick="nlAdd()" style="background:#4285f4;color:#fff;border:none;border-radius:14px;padding:10px 14px;font-size:13px;font-weight:700;font-family:Heebo,sans-serif;cursor:pointer;flex-shrink:0;touch-action:manipulation;box-shadow:0 3px 10px rgba(66,133,244,.4);">+ הוסף</button></div>
+<input type="date" id="datePickerInput" style="display:none;position:absolute" onchange="onDatePickerChange(this.value)">
+  <div id="evStrip"></div>
+  <!-- Year legend -->
+  <div id="yearLegend"></div>
+  <!-- Swiper -->
+  <div id="swiper">
+    <!-- Page 0: Calendar -->
+    <div id="pg0">
+      <div id="cvWrap">
+        <canvas id="cv"></canvas>
+        <div id="ov" onclick="closeSheets()"></div>
+        <button onclick="openAddSheet(_t.getDate())" style="position:absolute;bottom:16px;left:16px;width:52px;height:52px;border-radius:50%;background:#4285f4;color:#fff;border:none;font-size:28px;cursor:pointer;box-shadow:0 4px 16px rgba(66,133,244,.45);z-index:30;display:flex;align-items:center;justify-content:center;">+</button>
+        <!-- Edit sheet -->
+        <div class="sheet" id="editSheet">
+          <div class="bHdl"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--txt)">עריכת אירוע</span>
+            <button onclick="delEditEv()" style="background:none;border:none;color:#e74c3c;font-size:13px;cursor:pointer;font-family:'Heebo',sans-serif;">מחק</button>
+          </div>
+          <div class="addLbl">שם</div><input class="editField" id="eName" dir="rtl" placeholder="שם האירוע">
+          <div class="addRow"><div style="flex:1"><div class="addLbl">שעה</div><input class="editField" id="eTime" type="time" style="margin:0"></div><div style="flex:1"><div class="addLbl">משך (דקות)</div><input class="editField" id="eDur" type="number" placeholder="60" style="margin:0"></div></div>
+          <div class="addLbl">הערות</div><textarea class="editField" id="eNote" placeholder="הערות..." rows="2" dir="rtl" style="resize:none;"></textarea>
+          <div class="addLbl">קישורים</div>
+          <div id="eLinksList"></div>
+          <div style="display:flex;gap:6px;margin-bottom:10px;"><input class="editField" id="eLinkUrl" placeholder="https://..." dir="ltr" style="flex:1;margin:0;"><button onclick="addLink()" style="background:var(--blue);color:#fff;border:none;border-radius:10px;padding:10px 12px;font-size:13px;cursor:pointer;font-family:'Heebo',sans-serif;">+ הוסף</button></div>
+          <div class="addLbl">קבצים ותמונות</div>
+          <div id="eFilesList"></div>
+          <label style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#f5f5f7;border:1px dashed var(--brd);border-radius:12px;cursor:pointer;margin-bottom:10px;font-family:'Heebo',sans-serif;font-size:13px;color:var(--txt2);">&#128206; בחר קובץ<input type="file" id="eFileInput" multiple accept="image/*,.pdf,.doc,.docx,.txt" style="display:none;" onchange="addFiles(this.files)"></label>
+          <div class="addLbl">תזכורת</div>
+          <select class="editField" id="eRemind" style="margin-bottom:14px;"><option value="">ללא</option><option value="5">5 דקות לפני</option><option value="15">15 דקות לפני</option><option value="30">30 דקות לפני</option><option value="60">שעה לפני</option><option value="1440">יום לפני</option></select>
+          <button class="doAdd" onclick="saveEditEv()">שמור</button>
+        </div>
+        <!-- Day sheet -->
+        <div class="sheet" id="daySheet">
+          <div class="bHdl"></div>
+          <div class="dsTitle" id="dsTitle">אירועים</div>
+          <div id="dsList"></div>
+          <button class="doAdd" style="background:#f5f5f7;color:var(--txt);margin-top:4px" onclick="openAddSheet(_sel)">+ הוסף אירוע ליום זה</button>
+        </div>
+        <!-- Add sheet -->
+        <div class="sheet" id="addSheet">
+          <div class="bHdl"></div>
+          <div class="addLbl">שם האירוע</div>
+          <input class="addInp" id="asTitle" placeholder="מה מתוכנן?" dir="rtl">
+          <div class="addRow">
+            <div style="flex:1">
+              <div class="addLbl">שעה</div>
+              <input class="addInp" id="asTime" type="time" style="margin:0">
+            </div>
+            <div style="flex:1">
+              <div class="addLbl">משך (דקות)</div>
+              <input class="addInp" id="asDur" type="number" placeholder="60" style="margin:0">
+            </div>
+          </div>
+          <div class="addLbl">עדיפות</div>
+          <div class="addRow">
+            <button class="prioBtn" data-p="L" onclick="setPrio(this)">נמוכה</button>
+            <button class="prioBtn on" data-p="N" onclick="setPrio(this)">רגילה</button>
+            <button class="prioBtn" data-p="H" onclick="setPrio(this)">גבוהה</button>
+            <button class="prioBtn" data-p="U" onclick="setPrio(this)">דחוף</button>
+          </div>
+          <div class="addLbl">קטגוריה</div>
+          <div class="addRow" id="catBtns"></div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <label style="font-size:12px;color:var(--txt2)">שמור ב-Google Calendar</label>
+            <input type="checkbox" id="asGcal">
+          </div>
+          <button class="doAdd" id="asSubmit" onclick="doAdd()">+ הוסף אירוע</button>
+        </div>
+      </div>
+    </div>
+    <!-- Page 1: Events -->
+    <div class="pgScreen" id="pg1">
+      <div style="display:flex;align-items:center;padding:10px 14px 0;flex-shrink:0">
+        <button onclick="goPage(0)" style="background:none;border:none;font-size:20px;color:var(--blue);cursor:pointer;padding:0 8px 0 0">←</button>
+        <span style="font-family:'Space Mono',monospace;font-size:13px;color:var(--txt);font-weight:700">📋 אירועים וקטגוריות</span>
+      </div>
+      <div id="catLegendEdit" style="flex-shrink:0;padding:10px 14px 8px;border-bottom:1px solid var(--brd);background:#fff;max-height:40%;overflow-y:auto">
+        <div style="font-family:'Space Mono',monospace;font-size:8px;letter-spacing:3px;color:var(--txt3);margin-bottom:8px;text-transform:uppercase">קטגוריות</div>
+        <div id="catLegendList" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+      <div style="font-family:'Space Mono',monospace;font-size:8px;letter-spacing:3px;color:var(--txt3);padding:10px 14px 4px;flex-shrink:0;text-transform:uppercase;background:#f5f5f7;border-bottom:1px solid var(--brd)">אירועים</div>
+      <div class="pgScroll" id="evList">
+        <div style="text-align:center;color:var(--txt3);font-family:'Space Mono',monospace;font-size:12px;padding:40px 0">אין אירועים</div>
+      </div>
+    </div>
+    <!-- Page 2: AI -->
+    <div class="pgScreen" id="pg2">
+      <div style="display:flex;align-items:center;padding:10px 14px 0;flex-shrink:0">
+        <button onclick="goPage(0)" style="background:none;border:none;font-size:20px;color:var(--blue);cursor:pointer;padding:0 8px 0 0">←</button>
+        <span style="font-family:'Space Mono',monospace;font-size:13px;color:var(--txt);font-weight:700">✦ Claude AI</span>
+      </div>
+      <div class="chatWrap" id="chatWrap"></div>
+      <div class="qRow">
+        <button class="qBtn" onclick="qa('מה יש לי היום?')">היום</button>
+        <button class="qBtn" onclick="qa('מה הפגישה הבאה?')">פגישה הבאה</button>
+        <button class="qBtn" onclick="qa('אילו ימים עמוסים?')">עמוסים</button>
+        <button class="qBtn" onclick="qa('מה פנוי השבוע?')">פנוי?</button>
+        <button class="qBtn" onclick="qa('תן תובנות')">תובנות</button>
+      </div>
+      <div class="chatInpRow">
+        <textarea id="chatInp" placeholder="שאל על הלוח..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAI();}"></textarea>
+        <button id="chatSend" onclick="sendAI()">↑</button>
+      </div>
+    </div>
+    <!-- Page 3: Settings -->
+    <div class="pgScreen" id="pg3">
+      <div style="display:flex;align-items:center;padding:10px 14px 0;flex-shrink:0">
+        <button onclick="goPage(0)" style="background:none;border:none;font-size:20px;color:var(--blue);cursor:pointer;padding:0 8px 0 0">←</button>
+        <span style="font-family:'Space Mono',monospace;font-size:13px;color:var(--txt);font-weight:700">⚙️ הגדרות</span>
+      </div>
+      <div class="pgScroll">
+        <div class="setSection">
+          <div class="setLbl">Google Calendar</div>
+          <div class="setCard">
+            <div class="setRow" onclick="openGcal()"><div class="setIco">📅</div><div class="setTxt"><div class="setName">חיבור</div><div class="setSub" id="gcalStatus">לא מחובר</div></div><div class="setAct">חבר</div></div>
+            <div class="setRow" onclick="doSync()"><div class="setIco">🔄</div><div class="setTxt"><div class="setName">סנכרן עכשיו</div><div class="setSub" id="syncStatus">—</div></div><div class="setAct">↻</div></div>
+          </div>
+        </div>
+        <div class="setSection">
+          <div class="setLbl">תצוגה</div>
+          <div class="setCard">
+            <div class="setRow" onclick="setMode('day');goPage(0)"><div class="setIco">⏱</div><div class="setTxt"><div class="setName">יומי</div></div></div>
+            <div class="setRow" onclick="setMode('week');goPage(0)"><div class="setIco">📅</div><div class="setTxt"><div class="setName">שבועי</div></div></div>
+            <div class="setRow" onclick="setMode('month');goPage(0)"><div class="setIco">🗓</div><div class="setTxt"><div class="setName">חודשי</div></div></div>
+            <div class="setRow" onclick="setMode('year');goPage(0)"><div class="setIco">🌐</div><div class="setTxt"><div class="setName">שנתי</div></div></div>
+          </div>
+        </div>
+        <div class="setSection">
+          <div class="setLbl">מעגלי קטגוריות</div>
+          <div class="setCard" id="catSettingsCard"></div>
+        </div>
+        <div class="setSection">
+          <div class="setLbl">כלים</div>
+          <div class="setCard">
+            <div class="setRow" onclick="loadDemo()"><div class="setIco">🎭</div><div class="setTxt"><div class="setName">טען אירועי דמו</div></div></div>
+            <div class="setRow" onclick="doPrint()"><div class="setIco">🖨️</div><div class="setTxt"><div class="setName">הדפס לוח</div></div><div class="setAct">הדפס</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Page indicator -->
+  <div id="pageIndicator">
+    <div class="pgDot on" data-p="0" onclick="goPage(0)"></div>
+    <div class="pgDot" data-p="1" onclick="goPage(1)"></div>
+    <div class="pgDot" data-p="2" onclick="goPage(2)"></div>
+    <div class="pgDot" data-p="3" onclick="goPage(3)"></div>
+  </div>
+  <!-- GCal modal -->
+  <div id="gcalModal">
+    <div class="gmSheet">
+      <div class="bHdl"></div>
+      <div style="font-family:'Space Mono',monospace;font-size:14px;color:var(--txt);margin-bottom:12px">📅 Google Calendar</div>
+      <div class="gmTabs">
+        <button class="gmTab on" id="gmt1" onclick="gmTab(1)">OAuth (כתיבה)</button>
+        <button class="gmTab" id="gmt2" onclick="gmTab(2)">API Key (קריאה)</button>
+      </div>
+      <div id="gmp1">
+        <input class="gmInp" id="cidInp" value="321434327086-tt5v8n2l3ji1jt753s44bf6d87shm27j.apps.googleusercontent.com" dir="ltr" style="display:none">
+        <button class="gmBtn" style="background:var(--blue)" onclick="authOAuth()">G &nbsp;התחבר עם Google</button>
+      </div>
+      <div id="gmp2" style="display:none">
+        <div style="background:#fff3e0;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#7a4000;line-height:1.5">API Key — קריאה בלבד. צור ב-Google Cloud Console → Credentials.</div>
+        <input class="gmInp" id="akInp" placeholder="AIza..." dir="ltr">
+        <button class="gmBtn" style="background:#e67e22" onclick="authApiKey()">🔑 התחבר</button>
+      </div>
+      <div id="gcalConnected" style="display:none;background:#e8f5e9;border-radius:10px;padding:12px;margin-bottom:12px;direction:rtl">
+        <div style="font-size:13px;color:#1b5e20;font-weight:600;margin-bottom:6px">✅ מחובר ל-Google Calendar</div>
+        <div id="gcalConnectedInfo" style="font-size:12px;color:#2e7d32"></div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button onclick="doSync();updateGcalModalState();" style="background:var(--blue);border:none;border-radius:8px;padding:6px 14px;color:#fff;font-size:12px;cursor:pointer;font-family:'Heebo',sans-serif">🔄 סנכרן עכשיו</button>
+          <button onclick="disconnectGcal()" style="background:none;border:1px solid var(--red);border-radius:8px;padding:6px 14px;color:var(--red);font-size:12px;cursor:pointer;font-family:'Heebo',sans-serif">התנתק</button>
+        </div>
+      </div>
+      <button class="gmBtn" style="background:#f5f5f7;color:var(--txt2)" onclick="loadDemo()">🎭 מצב דמו</button>
+      <button class="gmCancel" onclick="closeGcal()">ביטול</button>
+    </div>
+  </div>
+  <!-- Print -->
+  <div id="printPage"></div>
+</div>
+<script>
+// ══ OFFLINE PERSISTENCE ══
+function saveData(){try{localStorage.setItem('spl_evs',JSON.stringify(_locEvs));localStorage.setItem('spl_cats',JSON.stringify(_cats));localStorage.setItem('spl_crm',JSON.stringify(_catRingMap));}catch(e){}}
+function loadData(){try{var e=localStorage.getItem('spl_evs');if(e)_locEvs=JSON.parse(e);var c=localStorage.getItem('spl_cats');if(c)_cats=JSON.parse(c);var r=localStorage.getItem('spl_crm');if(r)_catRingMap=JSON.parse(r);if(_locEvs.length)_eid=Math.max(_eid,..._locEvs.map(function(e){return typeof e.id==='number'?e.id+1:_eid;}));}catch(e){}}
+
+// ══ NEEDLE CONTROLS ══
+function nlAdd(){
+  if(!_yearNeedle)return;
+  if(_mode==='year'&&_yearNeedle.month!==undefined){_view=new Date(_t.getFullYear(),_yearNeedle.month,1);openAddSheet(_yearNeedle.day);}
+  else if(_mode==='month'&&_yearNeedle.slot!==undefined){openAddSheet(Math.max(1,Math.min(dim(),Math.round(_yearNeedle.slot+1))));}
+  else if(_mode==='week'&&_yearNeedle.slot!==undefined){var di=Math.min(6,Math.floor(_yearNeedle.slot/24));var ws=new Date(_t);ws.setDate(_t.getDate()-_t.getDay());var wd=new Date(ws);wd.setDate(ws.getDate()+di);_view=new Date(wd.getFullYear(),wd.getMonth(),1);openAddSheet(wd.getDate());}
+  else if(_mode==='day'){openAddSheet(_t.getDate());}
+}
+function moveNeedle(dir){
+  if(!_yearNeedle)return;
+  if(_mode==='year'&&_yearNeedle.month!==undefined){
+    var yn=_yearNeedle,di=new Date(_t.getFullYear(),yn.month+1,0).getDate(),nd=yn.day+dir;
+    if(nd<1){yn.month=Math.max(0,yn.month-1);yn.day=new Date(_t.getFullYear(),yn.month+1,0).getDate();}
+    else if(nd>di){yn.month=Math.min(11,yn.month+1);yn.day=1;}
+    else yn.day=nd;
+    _yearNeedle={month:yn.month,day:yn.day};
+  } else if(_yearNeedle.slot!==undefined){
+    var T=_mode==='month'?dim():_mode==='week'?168:24;
+    // ביומן יומי — קפיצות רבע שעה
+    var step=_mode==='day'?0.25:1;
+    _yearNeedle={slot:Math.max(0,Math.min(T,_yearNeedle.slot+dir*step))};
+  }
+  updLabel();draw();renderCd();
+}
+
+// ══ EVENT STRIP ══
+var _editEvId=null;
+function renderEvStrip(){
+  var el=document.getElementById('evStrip');if(!el)return;
+  var yn=_yearNeedle;if(!yn){el.style.display='none';return;}
+  var all2=[..._locEvs,..._gcalEvs],evs=[];
+  if(_mode==='year'&&yn.month!==undefined){evs=all2.filter(function(e){return e.month===yn.month&&e.day===yn.day;});}
+  else if(_mode==='month'&&yn.slot!==undefined){var d=Math.max(1,Math.min(dim(),Math.round(yn.slot+1)));evs=all2.filter(function(e){return e.month===_view.getMonth()&&e.day===d;});}
+  else if(_mode==='week'&&yn.slot!==undefined){var di2=Math.min(6,Math.floor(yn.slot/24)),hr2=Math.round(yn.slot%24);var ws2=new Date(_t);ws2.setDate(_t.getDate()-_t.getDay());var wd2=new Date(ws2);wd2.setDate(ws2.getDate()+di2);evs=all2.filter(function(e){if(e.month!==wd2.getMonth()||e.day!==wd2.getDate())return false;return e.hour===null||e.hour===undefined||Math.abs(e.hour-hr2)<=2;});}
+  else if(_mode==='day'&&yn.slot!==undefined){var h2=Math.max(0,Math.min(23,Math.round(yn.slot)));evs=all2.filter(function(e){if(e.month!==_t.getMonth()||e.day!==_t.getDate())return false;return e.hour===null||e.hour===undefined||Math.abs(e.hour-h2)<=2;});}
+  if(!evs.length){el.style.display='none';return;}
+  el.style.display='flex';
+  el.innerHTML=evs.map(function(ev){
+    var col=ec(ev),hex=col.replace('#','');
+    var r2=parseInt(hex.slice(0,2),16),g2=parseInt(hex.slice(2,4),16),b2=parseInt(hex.slice(4,6),16);
+    var bg='rgba('+r2+','+g2+','+b2+',.12)',brd='rgba('+r2+','+g2+','+b2+',.6)';
+    var eid=encodeURIComponent(String(ev.id));
+    return '<div class="evPill" style="background:'+bg+';border-color:'+brd+'" data-evid="'+eid+'">'
+      +'<div style="width:8px;height:8px;border-radius:50%;background:'+col+';flex-shrink:0"></div>'
+      +(ev.timeStr?'<span style="font-family:Space Mono,monospace;font-size:10px;color:#888">'+ev.timeStr+'</span>':'')
+      +'<span>'+ev.title+'</span>'
+      +(ev.links&&ev.links.length?'<span style="font-size:10px">&#128279;</span>':'')
+      +(ev.note?'<span style="font-size:10px">&#128203;</span>':'')
+      +(ev.files&&ev.files.length?'<span style="font-size:10px">&#128248;</span>':'')
+      +'</div>';
+  }).join('');
+  // הוסף event listeners
+  el.querySelectorAll('.evPill').forEach(function(pill){
+    function openPill(e){e.preventDefault();var id=decodeURIComponent(pill.dataset.evid);var ev2=all().find(function(x){return String(x.id)===id;});if(ev2)openEvPopup(ev2);}
+    pill.addEventListener('click',openPill);
+    pill.addEventListener('touchend',openPill);
+  });
+}
+function openEvPopup(ev){
+  if(!ev.isGcal){openEditSheet(ev.id);return;}
+  // לאירועי גוגל — הצג popup פשוט
+  var existing=document.getElementById('gcalEvPopup');
+  if(existing)existing.remove();
+  var popup=document.createElement('div');
+  popup.id='gcalEvPopup';
+  popup.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -4px 24px rgba(0,0,0,.15);z-index:60;padding:16px 18px 32px;direction:rtl';
+  var col=ec(ev);
+  popup.innerHTML='<div style="width:40px;height:4px;background:#ddd;border-radius:2px;margin:0 auto 16px"></div>'
+    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'
+    +'<div style="width:12px;height:12px;border-radius:50%;background:'+col+';flex-shrink:0"></div>'
+    +'<div style="font-size:16px;font-weight:700;color:#1a1a2e;flex:1">'+ev.title+'</div>'
+    +'<button onclick="document.getElementById(\'gcalEvPopup\').remove()" style="background:none;border:none;font-size:20px;color:#aaa;cursor:pointer">×</button>'
+    +'</div>'
+    +(ev.timeStr?'<div style="font-size:13px;color:#555;margin-bottom:8px">🕐 '+ev.timeStr+(ev.dur?' ('+ev.dur+' דקות)':'')+'</div>':'')
+    +'<div style="font-size:12px;color:#aaa">📅 אירוע מ-Google Calendar</div>'
+    +(ev.note?'<div style="font-size:13px;color:#555;margin-top:8px">📝 '+ev.note+'</div>':'');
+  document.body.appendChild(popup);
+  var ov=document.getElementById('ov');if(ov){ov.classList.add('show');ov.onclick=function(){popup.remove();ov.classList.remove('show');ov.onclick=null;};}
+}
+function openEditSheet(id){
+  var ev=[..._locEvs,..._gcalEvs].find(function(e){return e.id===id;});if(!ev)return;
+  _editEvId=id;
+  document.getElementById('eName').value=ev.title||'';
+  document.getElementById('eTime').value=ev.timeStr||'';
+  document.getElementById('eDur').value=ev.dur||'';
+  document.getElementById('eNote').value=ev.note||'';
+  document.getElementById('eRemind').value=ev.remind||'';
+  renderLinksList(ev.links||[]);
+  renderFilesList(ev.files||[]);
+  document.getElementById('editSheet').classList.add('open');
+  document.getElementById('ov').classList.add('show');
+  var leg=document.getElementById('yearLegend');if(leg)leg.classList.add('hidden');
+}
+function renderLinksList(links){
+  var el=document.getElementById('eLinksList');if(!el)return;
+  el.innerHTML=(links||[]).map(function(url,i){return '<div class="linkPill"><a href="'+url+'" target="_blank">'+url+'</a><button onclick="removeLink('+i+')" style="background:none;border:none;color:#ccc;font-size:16px;cursor:pointer">x</button></div>';}).join('');
+}
+function addLink(){
+  var inp=document.getElementById('eLinkUrl'),url=inp.value.trim();if(!url)return;
+  var ev=[..._locEvs,..._gcalEvs].find(function(e){return e.id===_editEvId;});if(!ev)return;
+  if(!ev.links)ev.links=[];ev.links.push(url);inp.value='';renderLinksList(ev.links);
+}
+function removeLink(i){
+  var ev=[..._locEvs,..._gcalEvs].find(function(e){return e.id===_editEvId;});
+  if(!ev||!ev.links)return;ev.links.splice(i,1);renderLinksList(ev.links);
+}
+function addFiles(files){
+  var ev=[..._locEvs,..._gcalEvs].find(function(e){return e.id===_editEvId;});if(!ev)return;
+  if(!ev.files)ev.files=[];
+  Array.from(files).forEach(function(f){
+    var reader=new FileReader();
+    reader.onload=function(e2){ev.files.push({name:f.name,type:f.type,data:e2.target.result});renderFilesList(ev.files);};
+    reader.readAsDataURL(f);
+  });
+  document.getElementById('eFileInput').value='';
+}
+function renderFilesList(files){
+  var el=document.getElementById('eFilesList');if(!el)return;
+  el.innerHTML=(files||[]).map(function(f,i){
+    var isImg=f.type&&f.type.startsWith('image/');
+    var preview=isImg?'<img src="'+f.data+'" style="width:40px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0">'
+      :'<div style="width:40px;height:40px;background:#e8f0fe;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px">&#128196;</div>';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#f5f5f7;border-radius:10px;margin-bottom:6px;">'
+      +preview+'<span style="flex:1;font-size:12px;color:var(--txt2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+f.name+'</span>'
+      +'<button onclick="removeFile('+i+')" style="background:none;border:none;color:#ccc;font-size:16px;cursor:pointer">x</button></div>';
+  }).join('');
+}
+function removeFile(i){
+  var ev=[..._locEvs,..._gcalEvs].find(function(e){return e.id===_editEvId;});
+  if(!ev||!ev.files)return;ev.files.splice(i,1);renderFilesList(ev.files);
+}
+function saveEditEv(){
+  var ev=[..._locEvs,..._gcalEvs].find(function(e){return e.id===_editEvId;});if(!ev)return;
+  ev.title=document.getElementById('eName').value.trim()||ev.title;
+  ev.timeStr=document.getElementById('eTime').value||null;
+  ev.hour=ev.timeStr?parseInt(ev.timeStr):ev.hour;
+  ev.note=document.getElementById('eNote').value.trim()||null;
+  ev.remind=document.getElementById('eRemind').value||null;
+  saveData();closeSheets();draw();renderEvStrip();
+}
+function delEditEv(){
+  _locEvs=_locEvs.filter(function(e){return e.id!==_editEvId;});
+  _gcalEvs=_gcalEvs.filter(function(e){return e.id!==_editEvId;});
+  saveData();closeSheets();draw();renderEvStrip();
+}
+
+// ══ SERVICE WORKER ══
+if('serviceWorker' in navigator){
+  var _sw='const C="sp-v1";self.addEventListener("install",e=>{self.skipWaiting();});self.addEventListener("activate",e=>{self.clients.claim();});self.addEventListener("fetch",e=>{if(e.request.url.includes("googleapis"))return;e.respondWith(caches.open(C).then(ca=>ca.match(e.request).then(r=>{if(r)return r;return fetch(e.request).then(resp=>{if(resp&&resp.status===200)ca.put(e.request,resp.clone());return resp;}).catch(()=>r);})));});';
+  var _blob=new Blob([_sw],{type:'application/javascript'});
+  navigator.serviceWorker.register(URL.createObjectURL(_blob)).catch(function(){});
+}
+
+// ══ STATE ══
+let _t=new Date();
+let _mode='year';
+let _sel=null, _lt={sl:0,t:0};
+let _view=new Date();
+let _gcalEvs=[], _locEvs=[];
+let _tok=null, _akey=null, _ro=false, _lastSync=null;
+let _eid=100, _chatHist=[];
+let _addDay=null, _addPrio='N', _addCat='personal';
+let _yearNeedle=null; // {month:0-11, day:1-31}
+let _draggingNeedle=false;
+let _needleLabelBounds=null;
+let _zoom=1;
+let _panX=0,_panY=0;
+let _panLastX=null,_panLastY=null;
+let _pinchDist=null;
+let _evFilter=null;
+let _curPage=0;
+let _focusedRing=null;
+
+// ══ CATEGORIES ══
+const DEFAULT_CATS=[
+  {id:'work',    name:'עבודה',                  color:'#4285f4', icon:'💼'},
+  {id:'study',   name:'לימודים',                color:'#8e44ad', icon:'📚'},
+  {id:'special', name:'חגים/ימי הולדת/חופשות', color:'#e74c3c', icon:'🎉'},
+  {id:'personal',name:'אישי',                   color:'#27ae60', icon:'🏠'},
+];
+let _cats=[...DEFAULT_CATS];
+// ring 3=outermost(work), 2=study, 1=special, 0=innermost(personal)
+let _catRingMap={work:3,study:2,special:1,personal:0};
+const CAT_ICONS=['⭐','🎉','🏠','📚','💼','🙏','🎂','✈','❤','🏃'];
+const CAT_COLORS=['#4285f4','#8e44ad','#27ae60','#e67e22','#e74c3c','#00bcd4','#f06292','#ff9800'];
+const MHE=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+const DAY_HE=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+
+// ══ CANVAS + SWIPER ══
+const cv=document.getElementById('cv');
+const ctx=cv.getContext('2d');
+const swiper=document.getElementById('swiper');
+let _swX=null, _swMoved=false;
+
+function resize(){
+  const wrap=document.getElementById('cvWrap');
+  const W=Math.min(wrap.clientWidth, wrap.clientHeight*.98);
+  cv.width=cv.height=Math.round(W*devicePixelRatio);
+  cv.style.width=cv.style.height=W+'px';
+  draw();
+}
+new ResizeObserver(resize).observe(document.getElementById('cvWrap'));
+
+// ══ HELPERS ══
+const all=()=>[..._locEvs,..._gcalEvs];
+const dim=()=>new Date(_view.getFullYear(),_view.getMonth()+1,0).getDate();
+const dod=d=>new Date(_view.getFullYear(),_view.getMonth(),d);
+const isCurMon=()=>_view.getFullYear()===_t.getFullYear()&&_view.getMonth()===_t.getMonth();
+const ang=(i,T)=>i/T*Math.PI*2-Math.PI/2;
+const pxy=(a,r)=>({x:cv.width/2+r*Math.cos(a),y:cv.height/2+r*Math.sin(a)});
+const ec=ev=>{const cat=_cats.find(c=>c.id===(ev.catId||'personal'));return cat?cat.color:'#4285f4';};
+function getRingPair(ringIdx,S){
+  const sc=S||cv.width/570;
+  const n=Math.max(1,_cats.length);
+  const rIn=75*sc,rOut=278*sc,outerW=14*sc,catOut=rOut-outerW;
+  let widths;
+  if(_focusedRing!==null){
+    const fW=(catOut-rIn)*.55,restW=(catOut-rIn)*.45/(n-1||1);
+    widths=Array.from({length:n},(_,i2)=>i2===_focusedRing?fW:restW);
+  } else {
+    const catW=(catOut-rIn)/n;
+    widths=Array.from({length:n},()=>catW);
+  }
+  const radii=[rIn];
+  widths.forEach(w=>radii.push(radii[radii.length-1]+w));
+  const i=Math.max(0,Math.min(n-1,ringIdx??0));
+  return[radii[i],radii[i+1]];
+}
+function getRingsForEv(ev,S){
+  const catId=ev.catId||'personal';
+  const ringIdx=_catRingMap[catId]??0;
+  return[getRingPair(ringIdx,S)];
+}
+function evSlot(ev){
+  if(_mode==='month'){if(ev.month!==undefined&&ev.month!==_view.getMonth())return -1;return ev.day;}
+  if(_mode==='year')return -1;
+  if(_mode==='week'){
+    const ws=new Date(_t);ws.setDate(_t.getDate()-_t.getDay());
+    for(let i=0;i<7;i++){const d=new Date(ws);d.setDate(ws.getDate()+i);
+      if(d.getDate()===ev.day&&d.getMonth()===ev.month)return i+1;}
+    return -1;
+  }
+  if(_mode==='day'){
+    if(ev.day!==_t.getDate()||ev.month!==_t.getMonth())return -1;
+    if(ev.hour==null)return 1;
+    return ev.hour+1;
+  }
+}
+
+// ══ DRAW ══
+function draw(){
+  const W=cv.width,H=cv.height,CX=W/2,CY=H/2;
+  const S=W/570;
+  const R0=56*S;
+  const T=_mode==='month'?dim():_mode==='week'?7:_mode==='day'?24:12;
+  const nRings=Math.max(1,_cats.length);
+  const R_IN=75*S,R_OUT=278*S;
+  const OUTER_W=14*S;
+  const R_CAT_OUT=R_OUT-OUTER_W;
+  let ringWidths;
+  if(_focusedRing!==null){
+    const fW=(R_CAT_OUT-R_IN)*.55;
+    const restW=(R_CAT_OUT-R_IN)*.45/(nRings-1||1);
+    ringWidths=Array.from({length:nRings},(_,i)=>i===_focusedRing?fW:restW);
+  } else {
+    const catW=(R_CAT_OUT-R_IN)/nRings;
+    ringWidths=Array.from({length:nRings},()=>catW);
+  }
+  const RINGS=[R_IN];
+  ringWidths.forEach(w=>RINGS.push(RINGS[RINGS.length-1]+w));
+  RINGS.push(R_OUT);
+  const ringPairs=Array.from({length:nRings},(_,i)=>[RINGS[i],RINGS[i+1]]);
+  const RY=RINGS[0],RO=R_OUT;
+  const R_DATE_IN=RINGS[nRings];
+  const R1=RINGS[Math.min(1,nRings)];
+
+  const ring=(r,col,lw)=>{ctx.beginPath();ctx.arc(CX,CY,r,0,Math.PI*2);ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.stroke();};
+  const donut=(ra,rb,col)=>{ctx.save();ctx.beginPath();ctx.arc(CX,CY,rb,0,Math.PI*2);ctx.arc(CX,CY,ra,0,Math.PI*2,true);ctx.closePath();ctx.fillStyle=col;ctx.fill();ctx.restore();};
+  const hatch=(ra,rb,c1,c2)=>{
+    ctx.save();ctx.beginPath();ctx.arc(CX,CY,rb,0,Math.PI*2);ctx.arc(CX,CY,ra,0,Math.PI*2,true);ctx.closePath();ctx.clip();
+    const step=8;
+    ctx.strokeStyle=c1;ctx.lineWidth=1;
+    for(let x=CX-RO;x<CX+RO;x+=step){ctx.beginPath();ctx.moveTo(x,CY-RO);ctx.lineTo(x+RO*.3,CY+RO);ctx.stroke();}
+    ctx.strokeStyle=c2;
+    for(let x=CX+RO;x>CX-RO;x-=step){ctx.beginPath();ctx.moveTo(x,CY-RO);ctx.lineTo(x-RO*.3,CY+RO);ctx.stroke();}
+    ctx.restore();
+  };
+  const spks=(n,ra,rb,col,lw,heavy)=>{
+    for(let i=0;i<n;i++){const a=ang(i,n);const p1=pxy(a,ra),p2=pxy(a,rb);
+      ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);
+      ctx.strokeStyle=col;ctx.lineWidth=heavy?lw*1.8:lw;ctx.stroke();}
+  };
+
+  // Clear
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#f8f8fc';ctx.fillRect(0,0,W,H);
+
+  // Glow
+  const glow=ctx.createRadialGradient(CX,CY,R_OUT*.7,CX,CY,R_OUT*1.1);
+  glow.addColorStop(0,'rgba(66,133,244,.06)');glow.addColorStop(1,'rgba(66,133,244,0)');
+  ctx.fillStyle=glow;ctx.beginPath();ctx.arc(CX,CY,R_OUT*1.1,0,Math.PI*2);ctx.fill();
+
+  // Ring fills (cat color)
+  ringPairs.forEach(([ra,rb],i)=>{
+    const catId=Object.entries(_catRingMap).find(([k,v])=>v===i)?.[0];
+    const cat=catId?_cats.find(c=>c.id===catId):null;
+    if(cat){
+      const hex=cat.color.replace('#','');
+      const r2=parseInt(hex.slice(0,2),16),g2=parseInt(hex.slice(2,4),16),b2=parseInt(hex.slice(4,6),16);
+      donut(ra,rb,`rgba(${r2},${g2},${b2},.18)`);
+      hatch(ra,rb,`rgba(${r2},${g2},${b2},.04)`,`rgba(${r2},${g2},${b2},.12)`);
+    } else {
+      donut(ra,rb,'rgba(180,180,200,.1)');
+    }
+  });
+
+  // Elapsed arc (non-year)
+  const df=_mode==='year'?0:_mode==='month'?(isCurMon()?(_t.getDate()-1+(_t.getHours()*3600+_t.getMinutes()*60+_t.getSeconds())/86400)/dim():0):_mode==='week'?(_t.getDay()+(_t.getHours()*3600+_t.getMinutes()*60)/86400)/7:(_t.getHours()*3600+_t.getMinutes()*60+_t.getSeconds())/86400;
+  if(df>0&&_mode!=='year'){
+    const eA=-Math.PI/2,eB=eA+df*Math.PI*2;
+    ringPairs.forEach(([a,b],i)=>{
+      const catId=Object.entries(_catRingMap).find(([k,v])=>v===i)?.[0];
+      const cat=catId?_cats.find(c=>c.id===catId):null;
+      const hex=(cat?cat.color:'#aaaacc').replace('#','');
+      const r2=parseInt(hex.slice(0,2),16),g2=parseInt(hex.slice(2,4),16),b2=parseInt(hex.slice(4,6),16);
+      ctx.save();ctx.beginPath();ctx.arc(CX,CY,b,eA,eB);ctx.arc(CX,CY,a,eB,eA,true);
+      ctx.closePath();ctx.fillStyle=`rgba(${r2},${g2},${b2},.18)`;ctx.fill();ctx.restore();
+    });
+  }
+
+  // Spokes
+  if(_mode==='year'){
+    spks(12,RY,R_DATE_IN,'rgba(0,0,20,.25)',1);
+  } else if(_mode==='week'){
+    spks(7,RY,RO,'rgba(0,0,50,.22)',.7);
+    spks(7,RY,RO,'rgba(0,0,50,.45)',1.5,true);
+  } else {
+    spks(T,RY,RO,'rgba(0,0,50,.15)',.5);
+    spks(Math.ceil(T/7),RY,RO,'rgba(0,0,50,.4)',1.2,true);
+  }
+
+  // Ring outlines
+  ringPairs.forEach(([ra,rb],i)=>{
+    const catId=Object.entries(_catRingMap).find(([k,v])=>v===i)?.[0];
+    const cat=catId?_cats.find(c=>c.id===catId):null;
+    ring(rb,cat?cat.color+'88':'rgba(0,0,0,.15)',1);
+  });
+  ring(RY,'rgba(0,0,0,.4)',2);
+  ring(R_DATE_IN,'rgba(0,0,0,.3)',1.5);
+  ring(RO,'rgba(0,0,0,.3)',1.5);
+
+  // ── DATE RING (year mode outer ring with day numbers) ──
+  if(_mode==='year'){
+    // Light fill for outer date ring
+    donut(R_DATE_IN,RO,'rgba(200,210,240,.25)');
+    ring(R_DATE_IN,'rgba(0,0,80,.3)',1.5);
+    // Day numbers per month
+    const yr2=_t.getFullYear();
+    for(let m=0;m<12;m++){
+      const di=new Date(yr2,m+1,0).getDate();
+      const ss=ang(m,12),sp=ang(m+1,12)-ss;
+      for(let d=1;d<=di;d++){
+        // Show every 5th day + 1st + last
+        if(d===1||d===10||d===20||d===di||(d%5===0&&di-d>2)){
+          const da=ss+((d-0.5)/di)*sp;
+          const p=pxy(da,(R_DATE_IN+RO)/2);
+          ctx.save();
+          ctx.translate(p.x,p.y);
+          ctx.rotate(da+Math.PI/2);
+          ctx.textAlign='center';ctx.textBaseline='middle';
+          const fs=Math.max(4,Math.round(5*S));
+          ctx.font=`700 ${fs}px 'Space Mono'`;
+          ctx.fillStyle='rgba(0,0,60,.65)';
+          ctx.fillText(String(d),0,0);
+          ctx.restore();
+        }
+      }
+    }
+  }
+
+  // ── EVENTS ──
+  if(_mode==='year'){
+    // Year mode: draw events per month
+    const yr=_t.getFullYear();
+    for(let m=0;m<12;m++){
+      const di=new Date(yr,m+1,0).getDate();
+      const ss=ang(m,12),sp=ang(m+1,12)-ss;
+      // Month fill for current month
+      if(m===_t.getMonth()){
+        ctx.save();ctx.globalAlpha=.07;
+        ctx.beginPath();ctx.arc(CX,CY,RO,ss,ss+sp);ctx.arc(CX,CY,RY,ss+sp,ss,true);
+        ctx.closePath();ctx.fillStyle='#4285f4';ctx.fill();ctx.restore();
+      }
+      // Day ticks
+      for(let d=0;d<di;d++){
+        const da=ss+(d/di)*sp;
+        const isSat=new Date(yr,m,d+1).getDay()===6;
+        const p1=pxy(da,R_DATE_IN),p2=pxy(da,RO-2);
+        ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);
+        ctx.strokeStyle=isSat?'rgba(200,50,50,.4)':'rgba(0,0,20,.1)';
+        ctx.lineWidth=isSat?.8:.4;ctx.stroke();
+      }
+      // Today highlight
+      if(m===_t.getMonth()){
+        const td=_t.getDate();
+        const da=ss+((td-1)/di)*sp;
+        const da2=ss+(td/di)*sp;
+        ctx.save();ctx.globalAlpha=.6;
+        ctx.beginPath();ctx.arc(CX,CY,RO,da,da2);ctx.arc(CX,CY,R_DATE_IN,da2,da,true);
+        ctx.closePath();ctx.fillStyle='#e74c3c';ctx.fill();ctx.restore();
+      }
+
+      // Events in month
+      const mEvs=all().filter(ev=>ev.month===m);
+      mEvs.forEach(ev=>{
+        if(ev.day<1||ev.day>di)return;
+        const col=ec(ev);
+        const [ra,rb]=getRingsForEv(ev,S)[0];
+        const da1=ss+((ev.day-1)/di)*sp,da2=ss+(ev.day/di)*sp;
+        ctx.save();ctx.globalAlpha=ev.done?.06:.4;
+        ctx.beginPath();ctx.arc(CX,CY,rb,da1,da2);ctx.arc(CX,CY,ra,da2,da1,true);
+        ctx.closePath();ctx.fillStyle=col;ctx.fill();ctx.restore();
+        // Star in ring
+        const daMid=(da1+da2)/2,rMid=(ra+rb)/2;
+        const sp2=pxy(daMid,rMid);
+        const sr=Math.max(2.5,Math.round(3*S));
+        ctx.save();ctx.translate(sp2.x,sp2.y);
+        ctx.beginPath();
+        for(let pt=0;pt<5;pt++){
+          const aO=pt*Math.PI*2/5-Math.PI/2,aI=(pt+.5)*Math.PI*2/5-Math.PI/2;
+          if(pt===0)ctx.moveTo(Math.cos(aO)*sr,Math.sin(aO)*sr);
+          else ctx.lineTo(Math.cos(aO)*sr,Math.sin(aO)*sr);
+          ctx.lineTo(Math.cos(aI)*sr*.42,Math.sin(aI)*sr*.42);
+        }
+        ctx.closePath();
+        ctx.shadowColor='rgba(255,255,255,.9)';ctx.shadowBlur=3;
+        ctx.fillStyle='#1a3a6e';ctx.fill();ctx.restore();
+      });
+    }
+  } else {
+    // Week/month/day
+    all().forEach(ev=>{
+      const slot=evSlot(ev);
+      if(slot<1||slot>T)return;
+      const col=ec(ev),a1=ang(slot-1,T),a2=ang(slot,T);
+      const [ra,rb]=getRingsForEv(ev,S)[0];
+      ctx.save();ctx.globalAlpha=ev.done?.08:.55;
+      ctx.beginPath();ctx.arc(CX,CY,rb,a1,a2);ctx.arc(CX,CY,ra,a2,a1,true);
+      ctx.closePath();ctx.fillStyle=col;ctx.fill();ctx.restore();
+      // Dot
+      const ma=(a1+a2)/2,p=pxy(ma,R_DATE_IN-8);
+      ctx.save();ctx.shadowColor=col;ctx.shadowBlur=6;
+      ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);
+      ctx.fillStyle=ev.done?'#aaa':col;ctx.globalAlpha=ev.done?.4:1;ctx.fill();ctx.restore();
+    });
+  }
+
+  // Labels
+  function rl(txt,a,r,sz,col){
+    const p=pxy(a,r);ctx.save();ctx.translate(p.x,p.y);ctx.rotate(a+Math.PI/2);
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.font=`700 ${sz}px 'Space Mono'`;ctx.fillStyle=col;ctx.fillText(txt,0,0);ctx.restore();
+  }
+  const labR=R_DATE_IN+7*S;
+  if(_mode==='year'){
+    // Month labels already drawn above
+  } else if(_mode==='month'){
+    const mn=dim();
+    for(let d=1;d<=mn;d++){
+      if(d%5===0||d===1||d===mn){
+        rl(String(d),ang(d-0.5,mn),labR,Math.max(6,Math.round(6.5*S)),'rgba(0,0,40,.6)');
+      }
+    }
+  } else if(_mode==='week'){
+    for(let i=0;i<7;i++) rl(['א','ב','ג','ד','ה','ו','ש'][i],ang(i+.5,7),labR,Math.max(8,Math.round(9*S)),'rgba(0,0,40,.7)');
+  } else {
+    for(let h=0;h<24;h+=3) rl(h+':00',ang(h+.5,24),labR,Math.max(6,Math.round(7*S)),'rgba(0,0,40,.6)');
+  }
+
+  // ── CLOCK ──
+  if(_mode==='year'){
+    // White outer ring, green inner face
+    ctx.beginPath();ctx.arc(CX,CY,R0,0,Math.PI*2);ctx.fillStyle='#f0f0f8';ctx.fill();
+    const gr=ctx.createRadialGradient(CX,CY,0,CX,CY,R0*.3);gr.addColorStop(0,'#34d058');gr.addColorStop(1,'#1e8a35');
+    ctx.beginPath();ctx.arc(CX,CY,R0*.3,0,Math.PI*2);ctx.fillStyle=gr;ctx.fill();
+  } else {
+    ctx.beginPath();ctx.arc(CX,CY,R0,0,Math.PI*2);ctx.fillStyle='#f5f5f0';ctx.fill();
+    const grC=ctx.createRadialGradient(CX,CY,0,CX,CY,R0*.3);grC.addColorStop(0,'#34d058');grC.addColorStop(1,'#1e8a35');
+    ctx.beginPath();ctx.arc(CX,CY,R0*.3,0,Math.PI*2);ctx.fillStyle=grC;ctx.fill();
+    const arcOut2=R0,arcIn2=R0*.32;
+    const arcFill2=(a1,a2,col,al)=>{ctx.save();ctx.globalAlpha=al;ctx.beginPath();ctx.arc(CX,CY,arcOut2,a1,a2);ctx.arc(CX,CY,arcIn2,a2,a1,true);ctx.closePath();ctx.fillStyle=col;ctx.fill();ctx.restore();};
+    if(_mode==='month'){const mn=dim(),tod=_t.getDate();if(isCurMon()){const d2a=d=>(d/mn)*Math.PI*2-Math.PI/2;const aT=d2a(tod-1),aR=d2a(Math.min(tod+6,mn));if(tod>1)arcFill2(d2a(0),aT,'#aaaacc',.2);arcFill2(aT,aR,'#e74c3c',.7);if(tod+6<mn)arcFill2(aR,d2a(mn),'#27ae60',.55);}}
+    else if(_mode==='week'){const nowH=_t.getDay()*24+_t.getHours()+_t.getMinutes()/60;const d2a=h=>(h/168)*Math.PI*2-Math.PI/2;const rEnd=Math.min(nowH+48,168);if(nowH>0)arcFill2(d2a(0),d2a(nowH),'#aaaacc',.2);arcFill2(d2a(nowH),d2a(rEnd),'#e74c3c',.7);if(rEnd<168)arcFill2(d2a(rEnd),d2a(168),'#27ae60',.55);}
+    else if(_mode==='day'){const h=_t.getHours()+_t.getMinutes()/60;const d2a=d=>(d/24)*Math.PI*2-Math.PI/2;const rEnd=Math.min(h+2,24);if(h>0)arcFill2(d2a(0),d2a(h),'#aaaacc',.2);arcFill2(d2a(h),d2a(rEnd),'#e74c3c',.7);if(rEnd<24)arcFill2(d2a(rEnd),d2a(24),'#27ae60',.55);}
+  }
+  // Clock border
+  ctx.save();ctx.shadowColor='rgba(0,0,0,.2)';ctx.shadowBlur=8;
+  ctx.beginPath();ctx.arc(CX,CY,R0,0,Math.PI*2);ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=4;ctx.stroke();
+  ctx.restore();
+  for(let i=0;i<12;i++){
+    const a=ang(i,12),isMajor=(i%3===0);
+    const p1=pxy(a,R0*(isMajor?.72:.78)),p2=pxy(a,R0*.92);
+    ctx.save();ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);
+    ctx.strokeStyle=isMajor?'rgba(0,0,0,.85)':'rgba(0,0,0,.5)';ctx.lineWidth=isMajor?2.5:1.2;ctx.lineCap='round';ctx.stroke();ctx.restore();
+    if(isMajor){const lp=pxy(a,R0*.58);ctx.save();ctx.fillStyle='rgba(0,0,0,.85)';ctx.font=`900 ${Math.round(Math.max(7,R0*.22))}px 'Heebo'`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(i===0?'12':String(i),lp.x,lp.y);ctx.restore();}
+  }
+  for(let i=0;i<60;i++){if(i%5===0)continue;const pd=pxy(ang(i,60),R0*.88);ctx.beginPath();ctx.arc(pd.x,pd.y,1,0,Math.PI*2);ctx.fillStyle='rgba(0,0,0,.3)';ctx.fill();}
+  // Clock labels (year mode)
+  if(_mode==='year'){
+    for(let m=0;m<12;m++){
+      const a=ang(m,12)+Math.PI/12;
+      rl(MHE[m].slice(0,3),a,R0*.68,Math.max(8,Math.round(9.5*S)),'rgba(0,0,50,.9)');
+    }
+  }
+  // Hands
+  const hA=(_t.getHours()%12+_t.getMinutes()/60)/12*Math.PI*2-Math.PI/2;
+  const mA2=(_t.getMinutes()+_t.getSeconds()/60)/60*Math.PI*2-Math.PI/2;
+  const sA=_t.getSeconds()/60*Math.PI*2-Math.PI/2;
+  ctx.save();ctx.shadowColor='rgba(0,0,0,.4)';ctx.shadowBlur=5;const ph=pxy(hA,R0*.55);ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(ph.x,ph.y);ctx.strokeStyle='#1a1a2e';ctx.lineWidth=4.5;ctx.lineCap='round';ctx.stroke();ctx.restore();
+  ctx.save();ctx.shadowColor='rgba(0,0,0,.3)';ctx.shadowBlur=4;const pm=pxy(mA2,R0*.75);ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(pm.x,pm.y);ctx.strokeStyle='#1a1a2e';ctx.lineWidth=3;ctx.lineCap='round';ctx.stroke();ctx.restore();
+  ctx.save();const ps=pxy(sA,R0*.82),pst=pxy(sA+Math.PI,R0*.18);ctx.beginPath();ctx.moveTo(pst.x,pst.y);ctx.lineTo(ps.x,ps.y);ctx.strokeStyle='#e74c3c';ctx.lineWidth=1.8;ctx.lineCap='round';ctx.stroke();ctx.restore();
+  ctx.beginPath();ctx.arc(CX,CY,5.5,0,Math.PI*2);ctx.fillStyle='#1a1a2e';ctx.fill();
+  ctx.beginPath();ctx.arc(CX,CY,3,0,Math.PI*2);ctx.fillStyle='#e74c3c';ctx.fill();
+  {let _dA;if(_mode==='year'){const yr2=_t.getFullYear(),m2=_t.getMonth();const di2=new Date(yr2,m2+1,0).getDate();const ss2=ang(m2,12),sp2=ang(m2+1,12)-ss2;_dA=ss2+((_t.getDate()-0.5)/di2)*sp2;}else if(_mode==='month'){_dA=ang(_t.getDate()-0.5,dim());}else if(_mode==='week'){_dA=ang(_t.getDay()*24+_t.getHours()+0.5,168);}else{_dA=ang(_t.getHours()+0.5,24);}
+  const _dR=R0*.75,_dAoff=_dA-0.12,_dwX=CX+_dR*Math.cos(_dAoff),_dwY=CY+_dR*Math.sin(_dAoff);
+  const dW=R0*.44,dH=R0*.3;ctx.save();ctx.shadowColor='rgba(0,0,0,.25)';ctx.shadowBlur=5;ctx.fillStyle='rgba(255,255,255,1)';ctx.beginPath();ctx.roundRect(_dwX-dW/2,_dwY-dH/2,dW,dH,3);ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle='#e74c3c';ctx.lineWidth=1.5;ctx.beginPath();ctx.roundRect(_dwX-dW/2,_dwY-dH/2,dW,dH,3);ctx.stroke();ctx.fillStyle='#1a1a2e';ctx.font=`900 ${Math.round(Math.max(8,dH*.65))}px 'Heebo'`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(_t.getDate(),_dwX,_dwY);ctx.restore();}
+  // ── RED NEEDLE (all modes) ──
+  if(_yearNeedle!==null){
+    const nA=getNeedleAngle();
+    const nTip=pxy(nA,RO+10);
+    // Line
+    ctx.save();ctx.shadowColor='rgba(220,50,50,.5)';ctx.shadowBlur=10;
+    ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(nTip.x,nTip.y);
+    ctx.strokeStyle='#e74c3c';ctx.lineWidth=3;ctx.stroke();ctx.restore();
+    // Arrowhead
+    const nb1=pxy(nA+Math.PI/2,7),nb2=pxy(nA-Math.PI/2,7);
+    ctx.beginPath();ctx.moveTo(nb1.x,nb1.y);ctx.lineTo(nb2.x,nb2.y);ctx.lineTo(nTip.x,nTip.y);
+    ctx.closePath();ctx.fillStyle='#e74c3c';ctx.fill();
+    // Handle
+    ctx.save();ctx.shadowColor='rgba(220,50,50,.4)';ctx.shadowBlur=8;
+    ctx.beginPath();ctx.arc(nTip.x,nTip.y,13,0,Math.PI*2);
+    ctx.fillStyle='#e74c3c';ctx.fill();ctx.restore();
+    ctx.beginPath();ctx.arc(nTip.x,nTip.y,13,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=2.5;ctx.stroke();
+    (function(){
+      var ld=document.getElementById('needleLabel');
+      if(!ld||!_yearNeedle){if(ld)ld.style.display='none';return;}
+      var yn=_yearNeedle,line1='',line2='',dCol='#888';
+      if(_mode==='year'&&yn.month!==undefined){
+        var nd=new Date(_t.getFullYear(),yn.month,yn.day),diff=Math.round((nd-new Date(_t.getFullYear(),_t.getMonth(),_t.getDate()))/86400000);
+        line1=yn.day+' '+MHE[yn.month]+' — '+DAY_HE[nd.getDay()];
+        line2=diff===0?'היום':diff===1?'מחר':diff===-1?'אתמול':diff>0?'בעוד '+diff+' ימים':'לפני '+(-diff)+' ימים';
+        dCol=diff===0?'#e67e22':diff>0?'#27ae60':'#e74c3c';
+      } else if(_mode==='month'&&yn.slot!==undefined){
+        var d=Math.max(1,Math.min(dim(),Math.round(yn.slot+1))),nd2=new Date(_view.getFullYear(),_view.getMonth(),d),diff2=Math.round((nd2-new Date(_t.getFullYear(),_t.getMonth(),_t.getDate()))/86400000);
+        line1=d+' '+MHE[_view.getMonth()]+' — '+DAY_HE[nd2.getDay()];
+        line2=diff2===0?'היום':diff2===1?'מחר':diff2>0?'בעוד '+diff2+' ימים':diff2===-1?'אתמול':'לפני '+(-diff2)+' ימים';
+        dCol=diff2===0?'#e67e22':diff2>0?'#27ae60':'#e74c3c';
+      } else if(_mode==='week'&&yn.slot!==undefined){
+        var di=Math.min(6,Math.floor(yn.slot/24)),hr=Math.round(yn.slot%24);
+        var ws=new Date(_t);ws.setDate(_t.getDate()-_t.getDay());var wd=new Date(ws);wd.setDate(ws.getDate()+di);
+        var diff3=Math.round((wd-new Date(_t.getFullYear(),_t.getMonth(),_t.getDate()))/86400000);
+        line1=DAY_HE[di]+' '+wd.getDate()+' '+MHE[wd.getMonth()]+' — '+String(hr).padStart(2,'0')+':00';
+        line2=diff3===0?'היום':diff3===1?'מחר':diff3>0?'בעוד '+diff3+' ימים':diff3===-1?'אתמול':'לפני '+(-diff3)+' ימים';
+        dCol=diff3===0?'#e67e22':diff3>0?'#27ae60':'#e74c3c';
+      } else if(_mode==='day'&&yn.slot!==undefined){
+        var h=Math.max(0,Math.min(23.99,yn.slot));
+        var hInt=Math.floor(h),mInt=Math.round((h-hInt)*60);
+        var diff4=h-_t.getHours()-_t.getMinutes()/60;
+        line1=String(hInt).padStart(2,'0')+':'+String(mInt).padStart(2,'0')+' — '+DAY_HE[_t.getDay()]+' '+_t.getDate()+' '+MHE[_t.getMonth()];
+        line2=Math.abs(diff4)<0.1?'עכשיו':diff4>0?'בעוד '+Math.round(diff4*60)+' דקות':'לפני '+Math.round(-diff4*60)+' דקות';
+        dCol=Math.abs(diff4)<0.1?'#e67e22':diff4>0?'#27ae60':'#e74c3c';
+      }
+      if(!line1){ld.style.display='none';var es=document.getElementById('evStrip');if(es)es.style.display='none';return;}
+      ld.style.display='flex';
+      document.getElementById('nlLine1').textContent=line1;
+      var l2=document.getElementById('nlLine2');l2.textContent=line2;l2.style.color=dCol;
+      renderEvStrip();
+    })();
+  }
+
+  // ── YEAR CLOCK ARCS (red=60d, green=305d) ──
+  if(_mode==='year'){
+    const arcOut=R0,arcIn=R0*.32;
+    const yr=_t.getFullYear();
+    const total=new Date(yr,1,29).getDate()===29?366:365;
+    const doy=Math.round((_t-new Date(yr,0,1))/86400000);
+    const d2a=d=>-Math.PI/2+(d/total)*Math.PI*2;
+    const aT=d2a(doy),aR=d2a(doy+60),aG=d2a(doy+365);
+    const arcFill=(a1,a2,col,al)=>{
+      ctx.save();ctx.globalAlpha=al;
+      ctx.beginPath();ctx.arc(CX,CY,arcOut,a1,a2);ctx.arc(CX,CY,arcIn,a2,a1,true);
+      ctx.closePath();ctx.fillStyle=col;ctx.fill();ctx.restore();
+    };
+    arcFill(aT,aR,'#e74c3c',.55);
+    arcFill(aR,aG,'#27ae60',.45);
+    // Dividers
+    const divLine=(a,col,lw)=>{
+      const p1=pxy(a,arcIn*.9),p2=pxy(a,arcOut);
+      ctx.save();ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);
+      ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.stroke();ctx.restore();
+    };
+    divLine(aT,'#e74c3c',2.5);
+    divLine(aR,'rgba(231,76,60,.8)',2);
+  }
+
+  // ── YEAR ZOOM ──
+  if(_zoom!==1||_panX!==0||_panY!==0){
+    ctx.save();ctx.translate(CX+_panX,CY+_panY);ctx.scale(_zoom,_zoom);ctx.translate(-CX,-CY);
+  }
+
+
+
+  if(_zoom!==1||_panX!==0||_panY!==0) ctx.restore();
+
+  // ── YEAR LEGEND ──
+  if(_mode==='year'){
+    renderLegend();
+  }
+}
+
+
+// ══ NEEDLE HIT DETECTION ══
+function touchHitsNeedle(touch){
+  if(_yearNeedle===null)return false;
+  const r=cv.getBoundingClientRect(),f=cv.width/r.width;
+  const mx=(touch.clientX-r.left)*f,my=(touch.clientY-r.top)*f;
+  const S2=cv.width/570,RO3=278*S2;
+  const tipA=getNeedleAngle();
+  const tx=cv.width/2+(RO3+10)*Math.cos(tipA);
+  const ty=cv.height/2+(RO3+10)*Math.sin(tipA);
+  return Math.hypot(mx-tx,my-ty)<55;
+}
+function touchHitsNeedleLine(touch){
+  if(_yearNeedle===null)return false;
+  const r=cv.getBoundingClientRect(),f=cv.width/r.width;
+  const mx=(touch.clientX-r.left)*f,my=(touch.clientY-r.top)*f;
+  const S2=cv.width/570,RO3=278*S2;
+  const CX=cv.width/2,CY=cv.height/2;
+  const nA2=getNeedleAngle();
+  const tipX=CX+(RO3+10)*Math.cos(nA2),tipY=CY+(RO3+10)*Math.sin(nA2);
+  const dx=tipX-CX,dy=tipY-CY,len=Math.sqrt(dx*dx+dy*dy);
+  if(len===0)return false;
+  const t=Math.max(0,Math.min(1,((mx-CX)*dx+(my-CY)*dy)/(len*len)));
+  return Math.hypot(mx-CX-t*dx,my-CY-t*dy)<22&&t>0.4;
+}
+function getNeedleAngle(){
+  if(_yearNeedle===null)return -Math.PI/2;
+  if(_mode==='year'){
+    const yn=_yearNeedle;
+    const ydi=new Date(_t.getFullYear(),yn.month+1,0).getDate();
+    const ySS=ang(yn.month,12),ySP=ang(yn.month+1,12)-ySS;
+    return ySS+((yn.day-0.5)/ydi)*ySP;
+  }
+  const slot=_yearNeedle.slot??0;
+  const T=_mode==='month'?dim():_mode==='week'?7:24;
+  return (slot/T)*Math.PI*2-Math.PI/2;
+}
+function angleToSlot(touch){
+  const r=cv.getBoundingClientRect(),f=cv.width/r.width;
+  const mx=(touch.clientX-r.left)*f,my=(touch.clientY-r.top)*f;
+  let a=Math.atan2(my-cv.height/2,mx-cv.width/2)*180/Math.PI+90;
+  if(a<0)a+=360;
+  const T=_mode==='month'?dim():_mode==='week'?7:24;
+  return{slot:Math.max(0,Math.min(T,a/360*T))};
+}
+function angleToYearDate(touch){
+  const r=cv.getBoundingClientRect(),f=cv.width/r.width;
+  const mx=(touch.clientX-r.left)*f,my=(touch.clientY-r.top)*f;
+  const dx=mx-cv.width/2,dy=my-cv.height/2;
+  const rawA=Math.atan2(dy,dx);
+  let aOff=rawA+Math.PI/2;
+  if(aOff<0)aOff+=Math.PI*2;if(aOff>=Math.PI*2)aOff-=Math.PI*2;
+  const m=Math.min(11,Math.floor(aOff/(Math.PI*2/12)));
+  const ss=ang(m,12),sp=ang(m+1,12)-ss;
+  const frac=Math.min(1,Math.max(0,(rawA-ss)/sp));
+  const di=new Date(_t.getFullYear(),m+1,0).getDate();
+  return{month:m,day:Math.min(di,Math.max(1,Math.floor(frac*di)+1))};
+}
+
+// ══ CANVAS TOUCH EVENTS ══
+let _tapStartX=null,_tapStartY=null;
+
+cv.addEventListener('touchstart',e=>{
+  if(e.touches.length===1){
+    _tapStartX=e.touches[0].clientX;
+    _tapStartY=e.touches[0].clientY;
+    _panLastX=null;_panLastY=null;
+    if(_yearNeedle!==null){
+      if(touchHitsNeedle(e.touches[0])||touchHitsNeedleLine(e.touches[0])){
+        _draggingNeedle=true;
+        _swX=null;
+        e.preventDefault();
+      }
+    }
+  } else if(e.touches.length===2){
+    _pinchDist=Math.hypot(
+      e.touches[0].clientX-e.touches[1].clientX,
+      e.touches[0].clientY-e.touches[1].clientY
+    );
+    _tapStartX=null;_tapStartY=null;
+    e.preventDefault();
+  }
+},{passive:false});
+
+cv.addEventListener('touchmove',e=>{
+  if(_draggingNeedle&&e.touches.length===1&&_yearNeedle!==null){
+    if(_mode==='year') _yearNeedle=angleToYearDate(e.touches[0]);
+    else _yearNeedle=angleToSlot(e.touches[0]);
+    _swMoved=false;draw();
+    e.preventDefault();e.stopPropagation();
+    return;
+  }
+  if(e.touches.length===2&&_pinchDist){
+    const d=Math.hypot(
+      e.touches[0].clientX-e.touches[1].clientX,
+      e.touches[0].clientY-e.touches[1].clientY
+    );
+    _zoom=Math.max(1,Math.min(5,_zoom*(d/_pinchDist)));
+    _pinchDist=d;draw();e.preventDefault();
+    if(_zoom<=1){_zoom=1;_panX=0;_panY=0;}
+    return;
+  }
+  if(!_draggingNeedle&&e.touches.length===1&&_zoom>1&&_tapStartX!==null){
+    const _px=e.touches[0].clientX,_py=e.touches[0].clientY;
+    if(_panLastX!==null){_panX+=_px-_panLastX;_panY+=_py-_panLastY;const _maxP=cv.getBoundingClientRect().width*(_zoom-1)/2;_panX=Math.max(-_maxP,Math.min(_maxP,_panX));_panY=Math.max(-_maxP,Math.min(_maxP,_panY));draw();_swMoved=false;e.preventDefault();e.stopPropagation();}
+    _panLastX=_px;_panLastY=_py;return;
+  }
+},{passive:false});
+
+cv.addEventListener('touchend',e=>{
+  if(e.touches.length<2){_pinchDist=null;_panLastX=null;_panLastY=null;}
+  if(_draggingNeedle){
+    _draggingNeedle=false;_tapStartX=null;_tapStartY=null;return;
+  }
+  // Short tap on ring → expand/collapse
+  if(_tapStartX!==null&&e.changedTouches.length===1){
+    const t=e.changedTouches[0];
+    if(Math.hypot(t.clientX-_tapStartX,t.clientY-_tapStartY)<14){
+      const r0=cv.getBoundingClientRect(),f0=cv.width/r0.width;
+      const mx0=(t.clientX-r0.left)*f0,my0=(t.clientY-r0.top)*f0;
+      const dist0=Math.hypot(mx0-cv.width/2,my0-cv.height/2);
+      const S0=cv.width/570,rIn0=75*S0,catOut0=(278-14)*S0;
+      if(dist0>=rIn0&&dist0<=catOut0){
+        const n0=_cats.length;
+        let widths0;
+        if(_focusedRing!==null){
+          const fW0=(catOut0-rIn0)*.55,rW0=(catOut0-rIn0)*.45/(n0-1||1);
+          widths0=Array.from({length:n0},(_,i)=>i===_focusedRing?fW0:rW0);
+        } else {
+          const cW0=(catOut0-rIn0)/n0;
+          widths0=Array.from({length:n0},()=>cW0);
+        }
+        const radii0=[rIn0];
+        widths0.forEach(w=>radii0.push(radii0[radii0.length-1]+w));
+        const ringIdx=radii0.slice(0,-1).findIndex((r,i)=>dist0>=r&&dist0<radii0[i+1]);
+        if(ringIdx>=0){
+          _focusedRing=(_focusedRing===ringIdx)?null:ringIdx;
+          draw();renderLegend();
+        }
+      }
+    }
+  }
+  _tapStartX=null;_tapStartY=null;
+},{passive:true});
+
+// ══ SWIPER ══
+swiper.addEventListener('touchstart',e=>{
+  if(document.getElementById('daySheet').classList.contains('open'))return;
+  if(document.getElementById('addSheet').classList.contains('open'))return;
+  if(_draggingNeedle){_swX=null;return;}
+  _swX=e.touches[0].clientX;_swMoved=false;
+},{passive:true});
+swiper.addEventListener('touchmove',e=>{
+  if(_swX===null)return;
+  if(Math.abs(e.touches[0].clientX-_swX)>8)_swMoved=true;
+},{passive:true});
+swiper.addEventListener('touchend',e=>{
+  if(_swX===null||!_swMoved){_swX=null;return;}
+  const dx=e.changedTouches[0].clientX-_swX;
+  if(dx<-50)goPage(_curPage+1);
+  else if(dx>50)goPage(_curPage-1);
+  _swX=null;
+});
+
+// ══ CLICK ══
+cv.addEventListener('click',e=>{
+  const r=cv.getBoundingClientRect(),f=cv.width/r.width;
+  const mx=(e.clientX-r.left)*f,my=(e.clientY-r.top)*f;
+  const CX=cv.width/2,CY=cv.height/2,S=cv.width/570;
+  const RY2=80*S,RO2=274*S;
+  const dx=mx-CX,dy=my-CY,dist=Math.sqrt(dx*dx+dy*dy);
+  // Needle label click
+  if(_needleLabelBounds&&_mode==='year'){
+    const b=_needleLabelBounds;
+    if(mx>=b.x&&mx<=b.x+b.w&&my>=b.y&&my<=b.y+b.h){
+      if(_yearNeedle){
+        _view=new Date(_t.getFullYear(),_yearNeedle.month,1);
+        openAddSheet(_yearNeedle.day);
+      }
+      return;
+    }
+  }
+  if(dist<RY2||dist>RO2+18){draw();return;}
+  let a=Math.atan2(dy,dx)*180/Math.PI+90;if(a<0)a+=360;
+  const T=_mode==='month'?dim():_mode==='week'?7:_mode==='day'?24:12;
+  const sl=Math.max(1,Math.min(T,Math.ceil(a/360*T)));
+  // _sel removed
+  const t2=Date.now(),isDbl=sl===_lt.sl&&t2-_lt.t<400;
+  _lt={sl,t:t2};
+  if(isDbl){closeSheets();openAddSheet(sl);}
+  else if(_mode!=='year'){
+    openDaySheet(sl);
+  }
+  // In year mode: no click action (needle via drag, rings via touchend)
+});
+
+// ══ NAV ══
+function goPage(n,animate=true){
+  _curPage=Math.max(0,Math.min(3,n));
+  [1,2,3].forEach(i=>{
+    const el=document.getElementById('pg'+i);if(!el)return;
+    if(!animate)el.style.transition='none';
+    el.classList.toggle('on',i===_curPage);
+    if(!animate)requestAnimationFrame(()=>{el.style.transition='';});
+  });
+  document.querySelectorAll('.pgDot').forEach(d=>d.classList.toggle('on',+d.dataset.p===_curPage));
+  if(_mode!==_mode)_evFilter=null;
+  if(_curPage===1){renderEvList();renderCatLegendEdit();}
+  if(_curPage===3){
+    const s=document.getElementById('gcalStatus');
+    if(s)s.textContent=_tok?'OAuth':_akey?'API Key':'לא מחובר';
+    renderCatSettings();
+  }
+}
+function setMode(m){
+  if(m===_mode)return;
+  const order=['day','week','month','year'],zIn=order.indexOf(m)>order.indexOf(_mode);
+  cv.style.transform=zIn?'scale(.85)':'scale(1.08)';cv.style.opacity='0.5';
+  document.getElementById('monthLbl').style.opacity='0';closeSheets();
+  setTimeout(()=>{
+    _mode=m;_sel=null;_zoom=1;_focusedRing=null;
+    cv.style.transform='scale(1)';cv.style.opacity='1';
+    document.getElementById('monthLbl').style.opacity='1';
+    if(m==='year'){
+      _yearNeedle={month:_t.getMonth(),day:_t.getDate()};
+    } else if(m==='month'){
+      _yearNeedle={slot:_t.getDate()-1};
+    } else if(m==='week'){
+      _yearNeedle={slot:_t.getDay()};
+    } else {
+      _yearNeedle={slot:_t.getHours()+_t.getMinutes()/60};
+    }
+    document.querySelectorAll('.modeTab').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
+    updLabel();draw();renderCd();renderLegend();
+  },180);
+}
+function chMon(d){
+  _view=new Date(_view.getFullYear(),_view.getMonth()+d,1);
+  updLabel();draw();renderCd();
+}
+function goToday(){
+  _view=new Date(_t.getFullYear(),_t.getMonth(),1);
+  updLabel();draw();renderCd();
+  document.getElementById('todayBtn').style.display='none';
+}
+function updLabel(){
+  const isT=isCurMon();
+  document.getElementById('monthLbl').textContent=MHE[_view.getMonth()]+' '+_view.getFullYear();
+  document.getElementById('monthLbl').style.color=isT?'var(--blue)':'var(--txt2)';
+  document.getElementById('todayBtn').style.display=isT?'none':'inline-block';
+}
+
+// ══ COUNTDOWN ══
+function renderCd(){
+  const el=document.getElementById('cdStrip');
+  const evs=all().filter(ev=>!ev.done).sort((a,b)=>{
+    const aD=new Date(_t.getFullYear(),(a.month??_t.getMonth()),a.day,a.hour??12);
+    const bD=new Date(_t.getFullYear(),(b.month??_t.getMonth()),b.day,b.hour??12);
+    return Math.abs(aD-_t)-Math.abs(bD-_t);
+  }).slice(0,8);
+  el.innerHTML=evs.map(ev=>{
+    const evD=new Date(_t.getFullYear(),(ev.month??_t.getMonth()),ev.day,ev.hour??12);
+    const diff=Math.round((evD-_t)/3600000);
+    const col=ec(ev);
+    const label=diff===0?'עכשיו':diff<0?`${-diff}ש׳ אחורה`:diff<24?`בעוד ${diff}ש׳`:diff<48?'מחר':`${Math.round(diff/24)} ימים`;
+    return`<div class="cdPill" onclick="goToEv(${typeof ev.id==='string'?`'${ev.id}'`:ev.id})">
+      <div class="dot" style="background:${col}"></div>
+      <span class="ev-title">${ev.title}</span>
+      <span class="ev-time">${label}</span>
+    </div>`;
+  }).join('');
+}
+function goToEv(id){
+  const ev=all().find(e=>e.id===id);if(!ev)return;
+  if(ev.month!==undefined){_view=new Date(_t.getFullYear(),ev.month,1);}
+  if(_mode==='year'){
+    _yearNeedle={month:ev.month??_t.getMonth(),day:ev.day??_t.getDate()};
+  } else if(_mode==='month'){
+    _yearNeedle={slot:(ev.day??1)-1};
+  } else if(_mode==='week'){
+    const ws=new Date(_t);ws.setDate(_t.getDate()-_t.getDay());
+    const evDate=new Date(_t.getFullYear(),ev.month??_t.getMonth(),ev.day??_t.getDate());
+    const diff=Math.round((evDate-ws)/86400000);
+    _yearNeedle={slot:Math.max(0,diff)*24+(ev.hour??12)};
+  } else if(_mode==='day'){
+    _yearNeedle={slot:ev.hour??12};
+  }
+  updLabel();draw();renderCd();
+  setTimeout(()=>openEvPopup(ev),100);
+}
+
+// ══ LEGEND ══
+function renderLegend(){
+  const el=document.getElementById('yearLegend');if(!el)return;
+  if(_mode!=='year'){el.style.display='none';return;}
+  el.style.display='flex';
+  const sorted=[..._cats].sort((a,b)=>(_catRingMap[b.id]??0)-(_catRingMap[a.id]??0));
+  function hexToLight(hex,a){const h=hex.replace('#','');const r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);return`rgba(${r},${g},${b},${a})`;}
+  el.innerHTML=sorted.map(c=>{
+    const bg=hexToLight(c.color,.16),brd=hexToLight(c.color,.55);
+    const active=_evFilter===c.id;
+    return`<div ontouchend="event.preventDefault();filterEvByCat('${c.id}')" onclick="filterEvByCat('${c.id}')" style="display:flex;align-items:center;gap:6px;padding:3px 8px 3px 3px;border-radius:20px;background:${active?c.color:bg};border:1.5px solid ${brd};cursor:pointer;touch-action:manipulation">
+      <div style="width:28px;height:14px;border-radius:4px;background:${active?'rgba(255,255,255,.3)':c.color};flex-shrink:0"></div>
+      <span style="font-size:12px;color:${active?'#fff':'#1a1a2e'};font-family:'Heebo',sans-serif;white-space:nowrap;font-weight:${active?700:400}">${c.name}</span>
+    </div>`;
+  }).join('');
+}
+
+// ══ CATEGORY LEGEND EDIT (page 1) ══
+function renderCatLegendEdit(){
+  const el=document.getElementById('catLegendList');if(!el)return;
+  const sorted=[..._cats].sort((a,b)=>(_catRingMap[b.id]??0)-(_catRingMap[a.id]??0));
+  el.innerHTML=sorted.map(c=>{
+    const hex=c.color.replace('#','');
+    const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);
+    const isActive=_evFilter===c.id;
+    const bg=isActive?c.color:`rgba(${r},${g},${b},.12)`;
+    const brd=isActive?c.color:`rgba(${r},${g},${b},.5)`;
+    return`<div onclick="filterEvByCat('${c.id}')" style="display:flex;align-items:center;gap:9px;padding:7px 10px;background:${bg};border:2px solid ${brd};border-radius:10px;cursor:pointer;">
+      <div style="width:28px;height:20px;border-radius:5px;background:${isActive?'rgba(255,255,255,.3)':c.color};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <span style="font-size:9px;color:${isActive?'#fff':'#1a3a6e'};">★</span>
+      </div>
+      <input value="${c.name}" dir="rtl" data-id="${c.id}"
+        onchange="renameCat('${c.id}',this.value)"
+        onclick="event.stopPropagation()"
+        style="flex:1;background:transparent;border:none;outline:none;font-size:13px;color:${isActive?'#fff':'#1a1a2e'};font-family:'Heebo',sans-serif;padding:0;cursor:pointer;">
+      <span style="font-size:14px;">${c.icon}</span>
+      <span style="font-family:'Space Mono',monospace;font-size:9px;color:${isActive?'rgba(255,255,255,.7)':'#aaa'};">מעגל ${(_catRingMap[c.id]??0)+1}</span>
+    </div>`;
+  }).join('');
+}
+function filterEvByCat(catId){
+  _evFilter=(_evFilter===catId)?null:catId;
+  renderLegend();renderCatLegendEdit();renderEvList();
+  if(_evFilter) goPage(1);
+}
+function renameCat(catId,newName){
+  const cat=_cats.find(c=>c.id===catId);
+  if(cat&&newName.trim())cat.name=newName.trim();
+  renderLegend();renderCatSettings();draw();
+}
+
+// ══ EVENT LIST (page 1) ══
+function renderEvList(){
+  const el=document.getElementById('evList');
+  const src=_evFilter?all().filter(ev=>(ev.catId||'personal')===_evFilter):all();
+  const today=new Date(_t.getFullYear(),_t.getMonth(),_t.getDate());
+  const sorted=src.sort((a,b)=>{
+    const aD=new Date(_t.getFullYear(),a.month??_t.getMonth(),a.day,a.hour??0);
+    const bD=new Date(_t.getFullYear(),b.month??_t.getMonth(),b.day,b.hour??0);
+    const aDiff=aD-today,bDiff=bD-today;
+    if(aDiff>=0&&bDiff<0)return -1;if(aDiff<0&&bDiff>=0)return 1;
+    return aDiff>=0?aDiff-bDiff:bDiff-aDiff;
+  });
+  el.innerHTML=sorted.length?sorted.map(ev=>{
+    const evDate=new Date(_t.getFullYear(),(ev.month??_t.getMonth()),ev.day,ev.hour??0);
+    const diffMs=evDate-today,diffDays=Math.round(diffMs/86400000);
+    const col=ec(ev);
+    const cat=_cats.find(c=>c.id===(ev.catId||'personal'));
+    const hex=col.replace('#','');
+    const r2=parseInt(hex.slice(0,2),16),g2=parseInt(hex.slice(2,4),16),b2=parseInt(hex.slice(4,6),16);
+    const lightBg=`rgba(${r2},${g2},${b2},.09)`;
+    let cdTxt='',cdCol='#888';
+    if(ev.done){cdTxt='✓ הושלם';cdCol='#aaa';}
+    else if(diffDays<0){cdTxt=`לפני ${-diffDays} ימים`;cdCol='#aaa';}
+    else if(diffDays===0){cdTxt='היום!';cdCol='#e74c3c';}
+    else if(diffDays===1){cdTxt='מחר';cdCol='#e67e22';}
+    else{cdTxt=`בעוד ${diffDays} ימים`;cdCol=diffDays<=7?'#e67e22':'#27ae60';}
+    const mon=ev.month!=null?MHE[ev.month]:MHE[_t.getMonth()];
+    const sid=typeof ev.id==='string'?`'${ev.id}'`:ev.id;
+    return`<div onclick="togEv(${sid})" style="display:flex;flex-direction:column;gap:4px;padding:11px 13px;background:${ev.done?'#f8f8f8':lightBg};border-radius:13px;border-right:3px solid ${col};cursor:pointer;opacity:${ev.done?.55:1};">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:${ev.done?'#ccc':col};flex-shrink:0;"></div>
+        <span style="flex:1;font-size:13px;color:#1a1a2e;${ev.done?'text-decoration:line-through;color:#aaa':''}">${ev.isGcal?'📅 ':''}${ev.title}</span>
+        <button onclick="event.stopPropagation();delEv(${sid})" style="background:none;border:none;color:#ccc;font-size:15px;cursor:pointer;padding:0 2px;">×</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding-right:16px;">
+        <span style="font-family:'Space Mono',monospace;font-size:10px;color:#888;">${ev.day} ${mon}${ev.timeStr?' · '+ev.timeStr:''}</span>
+        <span style="flex:1;"></span>
+        ${cat?`<span style="font-size:10px;color:${col};">${cat.icon} ${cat.name}</span>`:''}
+        <span style="font-family:'Space Mono',monospace;font-size:10px;font-weight:700;color:${cdCol};">${cdTxt}</span>
+      </div>
+    </div>`;
+  }).join(''):`<div style="text-align:center;color:#aaa;font-family:'Space Mono',monospace;font-size:12px;padding:40px 0;">אין אירועים</div>`;
+}
+
+// ══ SHEETS ══
+function closeSheets(){
+  document.getElementById('daySheet').classList.remove('open');
+  document.getElementById('addSheet').classList.remove('open');
+  document.getElementById('ov').classList.remove('show');
+}
+function openDaySheet(sl){
+  const ds=document.getElementById('daySheet');
+  const T=_mode==='month'?dim():_mode==='week'?7:_mode==='day'?24:12;
+  if(sl<1||sl>T)return;
+  let title=`יום ${sl}`;
+  if(_mode==='week')title=DAY_HE[sl-1];
+  if(_mode==='day')title=`${String(sl-1).padStart(2,'0')}:00`;
+  document.getElementById('dsTitle').textContent=title;
+  const evs=all().filter(ev=>evSlot(ev)===sl);
+  const dl=document.getElementById('dsList');
+  dl.innerHTML=evs.map(ev=>{
+    const col=ec(ev);const sid=typeof ev.id==='string'?`'${ev.id}'`:ev.id;
+    return`<div class="evCard${ev.done?' done':''}" style="border-right-color:${col}" onclick="togEv(${sid})">
+      <div class="evDot" style="background:${ev.done?'#aaa':col}"></div>
+      ${ev.timeStr?`<span class="evTime">${ev.timeStr}</span>`:''}
+      <span class="evName" style="${ev.done?'text-decoration:line-through':''}">${ev.isGcal?'📅 ':''}${ev.title}</span>
+      <button class="evDel" onclick="event.stopPropagation();delEv(${sid})">×</button>
+    </div>`;
+  }).join('')||'<div style="color:#aaa;font-size:12px;padding:8px 0">אין אירועים</div>';
+  ds.classList.add('open');
+  document.getElementById('ov').classList.add('show');
+}
+function openAddSheet(sl){
+  _addDay=sl;
+  renderCatBtns();
+  document.getElementById('addSheet').classList.add('open');
+  document.getElementById('ov').classList.add('show');
+  setTimeout(()=>document.getElementById('asTitle').focus(),300);
+}
+function setPrio(btn){
+  _addPrio=btn.dataset.p;
+  document.querySelectorAll('.prioBtn').forEach(b=>b.classList.toggle('on',b.dataset.p===_addPrio));
+}
+function renderCatBtns(){
+  const el=document.getElementById('catBtns');
+  el.innerHTML=_cats.map(c=>`<button class="catBtn${_addCat===c.id?' on':''}" data-id="${c.id}" onclick="setCat('${c.id}',this)" style="${_addCat===c.id?`background:${c.color};border-color:${c.color};color:#fff`:''}">${c.icon} ${c.name}</button>`).join('');
+}
+function setCat(id,btn){
+  _addCat=id;renderCatBtns();
+}
+function doAdd(){
+  const title=document.getElementById('asTitle').value.trim();
+  if(!title)return;
+  const tv=document.getElementById('asTime').value;
+  const dur=parseInt(document.getElementById('asDur').value)||60;
+  const T=_mode==='month'?dim():_mode==='week'?7:_mode==='day'?24:12;
+  let day=_addDay||_t.getDate(),month=_view.getMonth();
+  if(_mode==='week'){const ws=new Date(_t);ws.setDate(_t.getDate()-_t.getDay());const wd=new Date(ws);wd.setDate(ws.getDate()+(_addDay-1));day=wd.getDate();month=wd.getMonth();}
+  if(_mode==='day'){day=_t.getDate();month=_t.getMonth();}
+  const ev={id:_eid++,title,day,month,prio:_addPrio,catId:_addCat,done:false,timeStr:tv||null,hour:tv?parseInt(tv):null};
+  _locEvs.push(ev);
+  saveData();
+  if(document.getElementById('asGcal').checked&&_tok)addToGcal(ev);
+  document.getElementById('asTitle').value='';document.getElementById('asTime').value='';
+  closeSheets();draw();renderCd();
+}
+function togEv(id){const ev=all().find(e=>e.id===id);if(ev){ev.done=!ev.done;draw();renderCd();}}
+function delEv(id){
+  _locEvs=_locEvs.filter(e=>e.id!==id);
+  _gcalEvs=_gcalEvs.filter(e=>e.id!==id);
+  closeSheets();draw();renderCd();
+}
+
+// ══ GOOGLE CALENDAR ══
+function openGcal(){
+  document.getElementById('gcalModal').classList.add('on');
+  const cid=localStorage.getItem('spl_cid')||_CID;
+  const inp=document.getElementById('cidInp');
+  if(inp)inp.value=cid;
+  if(!_tok)_loadGsi(cid,false);
+  updateGcalModalState();
+}
+function closeGcal(){document.getElementById('gcalModal').classList.remove('on');}
+function gmTab(n){
+  document.getElementById('gmp1').style.display=n===1?'block':'none';
+  document.getElementById('gmp2').style.display=n===2?'block':'none';
+  document.getElementById('gmt1').classList.toggle('on',n===1);
+  document.getElementById('gmt2').classList.toggle('on',n===2);
+}
+function setGcalUI(state,msg){
+  const dot=document.getElementById('gcalDot');
+  const st=document.getElementById('syncStatus');
+  if(dot)dot.className='gcalDot '+(state==='on'?'on':'');
+  if(st)st.textContent=msg||'';
+}
+function updateGcalModalState(){
+  const connected=document.getElementById('gcalConnected');
+  const info=document.getElementById('gcalConnectedInfo');
+  const p1=document.getElementById('gmp1');
+  const p2=document.getElementById('gmp2');
+  const tabs=document.querySelector('.gmTabs');
+  if(_tok||_akey){
+    if(connected)connected.style.display='block';
+    if(info)info.textContent=_tok?`OAuth — קריאה + כתיבה · ${_gcalEvs.length} אירועים`:`API Key — קריאה בלבד · ${_gcalEvs.length} אירועים`;
+    if(p1)p1.style.display='none';if(p2)p2.style.display='none';
+    if(tabs)tabs.style.display='none';
+  } else {
+    if(connected)connected.style.display='none';
+    if(p1)p1.style.display='block';if(tabs)tabs.style.display='flex';
+  }
+}
+function disconnectGcal(){_tok=null;_akey=null;_ro=false;_gcalEvs=[];setGcalUI('off','לא מחובר');updateGcalModalState();draw();renderCd();}
+const _CID='321434327086-tt5v8n2l3ji1jt753s44bf6d87shm27j.apps.googleusercontent.com';
+let _tokenClient=null;
+function authOAuth(){
+  const cid=document.getElementById('cidInp').value.trim()||_CID;
+  localStorage.setItem('spl_cid',cid);
+  setGcalUI('spin','מתחבר...');
+  _loadGsi(cid,true);
+}
+function _loadGsi(cid,withPrompt){
+  if(!window.google){
+    const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';
+    s.onload=()=>_startOAuth(cid,withPrompt);
+    document.head.appendChild(s);
+  } else {_startOAuth(cid,withPrompt);}
+}
+function _startOAuth(cid,withPrompt){
+  _tokenClient=google.accounts.oauth2.initTokenClient({
+    client_id:cid,
+    scope:'https://www.googleapis.com/auth/calendar',
+    prompt:withPrompt?'consent':'',
+    callback:async r=>{
+      if(r.error){
+        // אם silent refresh נכשל — לא מציגים שגיאה, פשוט לא מחוברים
+        if(!withPrompt)return;
+        setGcalUI('off','שגיאה: '+r.error);return;
+      }
+      _tok=r.access_token;_ro=false;
+      // שמור זמן תפוגה
+      localStorage.setItem('spl_tok_exp', Date.now()+3500000);
+      document.getElementById('gcalDot').classList.add('on');
+      await syncPrimary();updateGcalModalState();
+      if(withPrompt){closeGcal();appendAI(`✅ מחובר ל-Google Calendar!\nטענתי ${_gcalEvs.length} אירועים.`);}
+    }
+  });
+  _tokenClient.requestAccessToken();
+}
+// רענון אוטומטי כל 50 דקות
+setInterval(()=>{
+  const cid=localStorage.getItem('spl_cid');
+  if(cid&&_tok)_loadGsi(cid,false);
+},3000000);
+function authApiKey(){
+  const k=document.getElementById('akInp').value.trim();
+  if(!k){alert('הדבק API Key');return;}
+  _akey=k;_ro=true;
+  document.getElementById('gcalDot').classList.add('on');
+  syncApiKey().then(()=>{updateGcalModalState();closeGcal();appendAI(`✅ מחובר (קריאה בלבד)\nטענתי ${_gcalEvs.length} אירועים.`);});
+}
+async function syncPrimary(){
+  if(!_tok){
+    // נסה לרענן token אם יש Client ID שמור
+    const cid=localStorage.getItem('spl_cid');
+    if(cid)_loadGsi(cid,false);
+    return;
+  }
+  // סנכרן תמיד את החודש הנוכחי (לא רק חודש התצוגה)
+  const ty=_t.getFullYear(),tm=_t.getMonth();
+  const tMin=new Date(ty,tm,1).toISOString(),tMax=new Date(ty,tm+1,0,23,59,59).toISOString();
+  try{
+    const res=await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${tMin}&timeMax=${tMax}&singleEvents=true&orderBy=startTime&maxResults=100`,{headers:{Authorization:'Bearer '+_tok}});
+    if(res.status===401){
+      // Token פג — נרענן
+      _tok=null;
+      const cid=localStorage.getItem('spl_cid');
+      if(cid)_loadGsi(cid,false);
+      return;
+    }
+    const d=await res.json();
+    _gcalEvs=(d.items||[]).filter(e=>e.start).map(e=>{
+      const s=e.start.dateTime||e.start.date,dt=new Date(s);
+      return{id:e.id,title:e.summary||'(ללא כותרת)',prio:'N',done:false,isGcal:true,catId:'work',
+        day:dt.getDate(),month:dt.getMonth(),hour:e.start.dateTime?dt.getHours():null,
+        timeStr:e.start.dateTime?dt.toTimeString().slice(0,5):null,calColor:'#4285f4'};
+    });
+    _lastSync=new Date();
+    document.getElementById('syncStatus').textContent='סונכרן: '+_lastSync.toLocaleTimeString('he-IL');
+    draw();renderCd();
+  }catch(e){console.error('gcal sync',e);}
+}
+async function syncApiKey(){
+  if(!_akey)return;
+  const y=_view.getFullYear(),m=_view.getMonth();
+  const tMin=new Date(y,m,1).toISOString(),tMax=new Date(y,m+1,0,23,59,59).toISOString();
+  try{
+    const res=await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${tMin}&timeMax=${tMax}&singleEvents=true&key=${_akey}&maxResults=100`);
+    const d=await res.json();
+    _gcalEvs=(d.items||[]).filter(e=>e.start).map(e=>{
+      const s=e.start.dateTime||e.start.date,dt=new Date(s);
+      return{id:e.id,title:e.summary||'(ללא כותרת)',prio:'N',done:false,isGcal:true,catId:'work',
+        day:dt.getDate(),month:dt.getMonth(),hour:e.start.dateTime?dt.getHours():null,
+        timeStr:e.start.dateTime?dt.toTimeString().slice(0,5):null};
+    });
+    draw();renderCd();
+  }catch(e){console.error('apikey sync',e);}
+}
+function doSync(){
+  if(_tok){
+    syncPrimary();
+  } else if(_akey){
+    syncApiKey();
+  } else {
+    const cid=localStorage.getItem('spl_cid')||_CID;
+    _loadGsi(cid,false);
+  }
+}
+function openDatePicker(){
+  if(_mode==='day'){openTimePicker();return;}
+  const inp=document.getElementById('datePickerInput');
+  if(!inp)return;
+  let dateStr='';
+  if(_yearNeedle){
+    if(_mode==='year'&&_yearNeedle.month!==undefined){
+      const d=new Date(_t.getFullYear(),_yearNeedle.month,_yearNeedle.day||1);
+      dateStr=d.toISOString().slice(0,10);
+    } else if(_mode==='month'&&_yearNeedle.slot!==undefined){
+      const d=new Date(_view.getFullYear(),_view.getMonth(),Math.round(_yearNeedle.slot+1));
+      dateStr=d.toISOString().slice(0,10);
+    } else if(_mode==='week'&&_yearNeedle.slot!==undefined){
+      const ws=new Date(_t);ws.setDate(_t.getDate()-_t.getDay());
+      const wd=new Date(ws);wd.setDate(ws.getDate()+Math.floor(_yearNeedle.slot/24));
+      dateStr=wd.toISOString().slice(0,10);
+    } else {
+      dateStr=new Date(_t.getFullYear(),_t.getMonth(),_t.getDate()).toISOString().slice(0,10);
+    }
+  }
+  inp.value=dateStr;
+  inp.showPicker?inp.showPicker():inp.click();
+}
+function openTimePicker(){
+  // הסר popup קיים
+  var ex=document.getElementById('timePickerPopup');if(ex)ex.remove();
+  // שעה ודקות נוכחיות מהמחוג
+  var slot=_yearNeedle?_yearNeedle.slot??0:0;
+  var hCur=Math.floor(slot),mCur=Math.round((slot-hCur)*60);
+  mCur=Math.round(mCur/15)*15; if(mCur>=60){mCur=0;hCur=Math.min(23,hCur+1);}
+  // בנה popup
+  var pop=document.createElement('div');
+  pop.id='timePickerPopup';
+  pop.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -4px 24px rgba(0,0,0,.15);z-index:70;padding:16px 18px 32px;direction:rtl';
+  // בנה אפשרויות שעות ודקות
+  var hours=Array.from({length:24},(_,i)=>i);
+  var mins=[0,15,30,45];
+  pop.innerHTML='<div style="width:40px;height:4px;background:#ddd;border-radius:2px;margin:0 auto 16px"></div>'
+    +'<div style="font-size:15px;font-weight:700;color:#1a1a2e;margin-bottom:14px;text-align:center">בחר שעה</div>'
+    +'<div style="display:flex;gap:12px;justify-content:center;margin-bottom:16px">'
+    +'<div style="flex:1">'
+    +'<div style="font-size:11px;color:#aaa;text-align:center;margin-bottom:6px;font-family:Space Mono">שעה</div>'
+    +'<select id="tpHour" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:10px;font-size:16px;text-align:center">'
+    +hours.map(h=>`<option value="${h}" ${h===hCur?'selected':''}>${String(h).padStart(2,'0')}</option>`).join('')
+    +'</select></div>'
+    +'<div style="flex:1">'
+    +'<div style="font-size:11px;color:#aaa;text-align:center;margin-bottom:6px;font-family:Space Mono">דקות</div>'
+    +'<select id="tpMin" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:10px;font-size:16px;text-align:center">'
+    +mins.map(m=>`<option value="${m}" ${m===mCur?'selected':''}>${String(m).padStart(2,'0')}</option>`).join('')
+    +'</select></div>'
+    +'</div>'
+    +'<button onclick="applyTimePicker()" style="width:100%;padding:14px;background:#4285f4;color:#fff;border:none;border-radius:14px;font-size:15px;font-family:Heebo,sans-serif;font-weight:700;cursor:pointer">אישור</button>';
+  document.body.appendChild(pop);
+  var ov=document.getElementById('ov');
+  if(ov){ov.classList.add('show');ov.onclick=function(){pop.remove();ov.classList.remove('show');ov.onclick=null;};}
+}
+function applyTimePicker(){
+  var h=parseInt(document.getElementById('tpHour').value);
+  var m=parseInt(document.getElementById('tpMin').value);
+  _yearNeedle={slot:h+m/60};
+  var pop=document.getElementById('timePickerPopup');if(pop)pop.remove();
+  var ov=document.getElementById('ov');if(ov){ov.classList.remove('show');ov.onclick=null;}
+  updLabel();draw();renderCd();
+}
+function onDatePickerChange(val){
+  if(!val)return;
+  const d=new Date(val);
+  if(_mode==='year'){
+    _yearNeedle={month:d.getMonth(),day:d.getDate()};
+    _view=new Date(d.getFullYear(),d.getMonth(),1);
+  } else if(_mode==='month'){
+    _view=new Date(d.getFullYear(),d.getMonth(),1);
+    _yearNeedle={slot:d.getDate()-1};
+  } else if(_mode==='week'){
+    const ws=new Date(d);ws.setDate(d.getDate()-d.getDay());
+    const diff=Math.round((d-ws)/86400000);
+    _yearNeedle={slot:diff*24+(_t.getHours())};
+    _view=new Date(d.getFullYear(),d.getMonth(),1);
+  } else if(_mode==='day'){
+    _view=new Date(d.getFullYear(),d.getMonth(),1);
+    _yearNeedle={slot:_t.getHours()};
+  }
+  updLabel();draw();renderCd();
+}
+async function addToGcal(ev){
+  if(!_tok)return;
+  const d=new Date(_t.getFullYear(),ev.month,ev.day,ev.hour||9,0,0);
+  const end=new Date(d.getTime()+60*60000);
+  const body={summary:ev.title,start:{dateTime:d.toISOString()},end:{dateTime:end.toISOString()}};
+  await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events',{
+    method:'POST',headers:{Authorization:'Bearer '+_tok,'Content-Type':'application/json'},
+    body:JSON.stringify(body)
+  });
+}
+
+// ══ CLAUDE AI ══
+function appendAI(txt,role='ai'){
+  const w=document.getElementById('chatWrap');
+  const div=document.createElement('div');div.className=`msg ${role==='ai'?'a':'u'}`;
+  div.innerHTML=`<div class="msg-content">${txt.replace(/\n/g,'<br>')}</div>`;
+  w.appendChild(div);w.scrollTop=w.scrollHeight;
+}
+async function sendAI(){
+  const inp=document.getElementById('chatInp');
+  const q=inp.value.trim();if(!q)return;
+  inp.value='';appendAI(q,'user');
+  _chatHist.push({role:'user',content:q});
+  const evCtx=all().slice(0,20).map(e=>`${e.title} (${e.day}/${(e.month||0)+1}${e.timeStr?' '+e.timeStr:''})`).join(', ');
+  const sys=`אתה עוזר יומן חכם. האירועים הקרובים: ${evCtx||'אין אירועים'}. תאריך היום: ${_t.toLocaleDateString('he-IL')}. ענה בעברית בקצרה.`;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,system:sys,messages:_chatHist})
+    });
+    const d=await res.json();
+    const txt2=d.content?.[0]?.text||'שגיאה';
+    _chatHist.push({role:'assistant',content:txt2});
+    appendAI(txt2);
+  }catch(e){appendAI('שגיאת חיבור');}
+}
+function qa(q){document.getElementById('chatInp').value=q;sendAI();}
+
+// ══ SETTINGS — CATEGORIES ══
+function renderCatSettings(){
+  const el=document.getElementById('catSettingsCard');if(!el)return;
+  el.innerHTML=_cats.map(c=>`
+    <div class="setRow" onclick="editCat('${c.id}')">
+      <div class="setIco">${c.icon}</div>
+      <div class="setTxt"><div class="setName">${c.name}</div><div class="setSub">מעגל ${(_catRingMap[c.id]??0)+1} · <span style="color:${c.color}">■</span> ${c.color}</div></div>
+      <div class="setAct">ערוך</div>
+    </div>`).join('')+
+    `<div class="setRow" onclick="addNewCat()"><div class="setIco">＋</div><div class="setTxt"><div class="setName">הוסף קטגוריה</div></div></div>`;
+}
+function addNewCat(){
+  if(_cats.length>=8){alert('מקסימום 8 קטגוריות');return;}
+  const newId='cat'+Date.now();
+  _cats.push({id:newId,name:'קטגוריה חדשה',color:CAT_COLORS[_cats.length%CAT_COLORS.length],icon:'⭐'});
+  _catRingMap[newId]=_cats.length-1;
+  renderCatSettings();renderLegend();renderCatLegendEdit();draw();editCat(newId);
+}
+function deleteCat(catId){
+  if(_cats.length<=1)return;
+  const idx=_cats.findIndex(c=>c.id===catId);
+  if(idx<0)return;
+  _cats.splice(idx,1);delete _catRingMap[catId];
+  _cats.forEach((c,i)=>{if(_catRingMap[c.id]===undefined)_catRingMap[c.id]=i;});
+  [..._locEvs,..._gcalEvs].forEach(ev=>{if(ev.catId===catId)ev.catId=_cats[0].id;});
+  renderCatSettings();renderLegend();renderCatLegendEdit();closeCatEdit();draw();
+}
+function editCat(catId){
+  const cat=_cats.find(c=>c.id===catId);if(!cat)return;
+  closeCatEdit();
+  const modal=document.createElement('div');modal.id='catEditModal';
+  const nRings=_cats.length;
+  modal.innerHTML=`<div style="background:#fff;border-radius:22px 22px 0 0;padding:0 18px 32px;width:100%;border-top:2px solid var(--blue);">
+    <div class="bHdl"></div>
+    <div style="font-family:'Space Mono',monospace;font-size:13px;color:var(--txt);margin-bottom:14px;">עריכת קטגוריה</div>
+    <div style="font-size:11px;color:#666;font-family:'Space Mono',monospace;margin-bottom:5px;">שם</div>
+    <input id="catNameInp" value="${cat.name}" dir="rtl" style="width:100%;background:#f5f5f7;border:1px solid var(--brd);border-radius:10px;padding:11px 13px;color:var(--txt);font-size:14px;outline:none;font-family:'Heebo',sans-serif;margin-bottom:12px;">
+    <div style="font-size:11px;color:#666;font-family:'Space Mono',monospace;margin-bottom:5px;">אייקון</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
+      ${CAT_ICONS.map(ic=>`<button onclick="setCatIcon('${catId}','${ic}')" style="font-size:22px;background:${cat.icon===ic?'#e8f0fe':'transparent'};border:1px solid ${cat.icon===ic?'var(--blue)':'#e0e0e8'};border-radius:9px;padding:6px 10px;cursor:pointer;">${ic}</button>`).join('')}
+    </div>
+    <div style="font-size:11px;color:#666;font-family:'Space Mono',monospace;margin-bottom:5px;">צבע</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+      ${CAT_COLORS.map(cl=>`<button onclick="setCatColor('${catId}','${cl}')" style="width:30px;height:30px;border-radius:50%;background:${cl};border:3px solid ${cat.color===cl?'#333':'transparent'};cursor:pointer;"></button>`).join('')}
+    </div>
+    <div style="font-size:11px;color:#666;font-family:'Space Mono',monospace;margin-bottom:5px;">מעגל (1=פנימי)</div>
+    <div style="display:flex;gap:6px;margin-bottom:16px;">
+      ${Array.from({length:nRings},(_,i)=>`<button onclick="setCatRing('${catId}',${i})" style="flex:1;padding:9px 2px;background:${_catRingMap[catId]===i?'var(--blue)':'#f0f0f8'};border:1px solid ${_catRingMap[catId]===i?'var(--blue)':'#d0d0e0'};border-radius:9px;color:${_catRingMap[catId]===i?'#fff':'var(--txt)'};font-family:'Space Mono',monospace;font-size:12px;cursor:pointer;">${i+1}</button>`).join('')}
+    </div>
+    <button onclick="saveCatEdit('${catId}')" style="width:100%;padding:13px;background:var(--blue);border:none;border-radius:12px;color:#fff;font-size:14px;cursor:pointer;font-family:'Heebo',sans-serif;">שמור</button>
+    <button onclick="deleteCat('${catId}')" style="width:100%;padding:9px;background:transparent;border:none;color:#e74c3c;font-size:13px;cursor:pointer;font-family:'Heebo',sans-serif;margin-top:4px;">מחק קטגוריה</button>
+    <button onclick="closeCatEdit()" style="width:100%;padding:9px;background:transparent;border:none;color:#888;font-size:13px;cursor:pointer;font-family:'Heebo',sans-serif;">ביטול</button>
+  </div>`;
+  document.getElementById('root').appendChild(modal);
+}
+function closeCatEdit(){const m=document.getElementById('catEditModal');if(m)m.remove();}
+function saveCatEdit(catId){
+  const cat=_cats.find(c=>c.id===catId);
+  if(cat){const inp=document.getElementById('catNameInp');if(inp)cat.name=inp.value.trim()||cat.name;}
+  renderCatSettings();renderLegend();renderCatLegendEdit();closeCatEdit();draw();
+}
+function setCatIcon(catId,icon){const cat=_cats.find(c=>c.id===catId);if(cat){cat.icon=icon;}renderCatSettings();closeCatEdit();editCat(catId);}
+function setCatColor(catId,color){const cat=_cats.find(c=>c.id===catId);if(cat){cat.color=color;}renderCatSettings();closeCatEdit();editCat(catId);}
+function setCatRing(catId,ri){
+  const prev=Object.entries(_catRingMap).find(([k,v])=>v===ri);
+  if(prev&&prev[0]!==catId){_catRingMap[prev[0]]=_catRingMap[catId];}
+  _catRingMap[catId]=ri;
+  renderCatSettings();closeCatEdit();editCat(catId);draw();
+}
+
+// ══ DEMO ══
+function loadDemo(){
+  closeGcal();
+  const d=_t.getDate();
+  _view=new Date(_t.getFullYear(),_t.getMonth(),1);
+  _gcalEvs=[
+    {id:'g1',day:d,hour:9, timeStr:'09:00',title:'סטנד-אפ יומי',    prio:'N',done:false,isGcal:true,catId:'work'},
+    {id:'g2',day:d,hour:14,timeStr:'14:00',title:'1:1 עם המנהל',     prio:'H',done:false,isGcal:true,catId:'work'},
+    {id:'g3',day:d+1,hour:10,timeStr:'10:00',title:'ישיבת צוות',     prio:'N',done:false,isGcal:true,catId:'work'},
+    {id:'g4',day:d+2,hour:15,timeStr:'15:00',title:'הדגמת לקוח',     prio:'U',done:false,isGcal:true,catId:'work'},
+    {id:'g5',day:d+4,hour:null,timeStr:null,title:'יום הולדת - דנה', prio:'H',done:false,isGcal:true,catId:'special'},
+    {id:'g6',day:d+5,hour:9,timeStr:'09:00',title:'קורס React',      prio:'N',done:false,isGcal:true,catId:'study'},
+    {id:'g7',day:d+9,hour:16,timeStr:'16:00',title:'ריצה בפארק',     prio:'N',done:false,isGcal:true,catId:'personal'},
+    {id:'g8',day:d+13,hour:null,timeStr:null,title:'חופשת פסח',      prio:'H',done:false,isGcal:true,catId:'special'},
+    {id:'g9',day:Math.max(1,d-2),hour:11,timeStr:'11:00',title:'סקירת קוד',prio:'N',done:true,isGcal:true,catId:'work'},
+  ].map(e=>({...e,month:_t.getMonth()})).filter(e=>e.day>=1&&e.day<=31);
+  updLabel();draw();renderCd();
+  appendAI('🎭 מצב דמו פעיל!\nהוספתי אירועים לדוגמה.\n\n• גלול שמאל — אירועים וקטגוריות\n• גלול שמאל שוב — Claude AI\n• גלול שמאל שוב — הגדרות');
+}
+
+// ══ PRINT ══
+function doPrint(){
+  const pp=document.getElementById('printPage');
+  pp.innerHTML=`<h2 style="font-family:'Heebo';direction:rtl">לוח הספירלה — ${MHE[_view.getMonth()]} ${_view.getFullYear()}</h2>
+    <img src="${cv.toDataURL()}" style="max-width:100%">
+    <div style="direction:rtl;font-family:'Heebo'">
+      ${all().sort((a,b)=>a.day-b.day).map(e=>`<div style="padding:6px;border-bottom:1px solid #eee">${e.day}/${_view.getMonth()+1} — ${e.title} ${e.timeStr?'('+e.timeStr+')':''}</div>`).join('')}
+    </div>`;
+  window.print();
+}
+
+// ══ BOOT ══
+function boot(){
+  _view=new Date(_t.getFullYear(),_t.getMonth(),1);
+  loadData();
+  // Init needle for current mode
+  if(_mode==='year') _yearNeedle={month:_t.getMonth(),day:_t.getDate()};
+  else if(_mode==='month') _yearNeedle={slot:_t.getDate()-1};
+  else if(_mode==='week') _yearNeedle={slot:_t.getDay()};
+  else _yearNeedle={slot:_t.getHours()+_t.getMinutes()/60};
+  resize();
+  loadDemo();
+  updLabel();draw();renderCd();renderLegend();renderCatLegendEdit();
+  goPage(0,false);
+  setTimeout(()=>appendAI('שלום! לוח הספירלה.\n\n• גלול שמאל — אירועים\n• גלול שמאל שוב — Claude AI\n• גלול שמאל שוב — הגדרות\n• יומן שנתי: גרור את המחוג האדום\n• כפתור ← — חזרה ללוח'),400);
+}
+setInterval(()=>{_t=new Date();draw();renderCd();},1000);
+setInterval(()=>{if(_tok)syncPrimary();else if(_akey)syncApiKey();},600000);
+requestAnimationFrame(boot);
+
+// ══ AUTO RECONNECT ══
+window.addEventListener('load',()=>{
+  const cid=localStorage.getItem('spl_cid')||_CID;
+  setTimeout(()=>_loadGsi(cid,false),1500);
+});
+
+// ══ SERVICE WORKER — מחק cache ישן ועדכן תמיד ══
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.getRegistrations().then(regs=>{
+      regs.forEach(r=>r.unregister());
+    });
+    caches.keys().then(keys=>keys.forEach(k=>caches.delete(k)));
+    navigator.serviceWorker.register('sw.js')
+      .then(r=>{r.update();console.log('SW updated');})
+      .catch(e=>console.log('SW error:',e));
+  });
+}
+</script>
+</body>
+</html>
